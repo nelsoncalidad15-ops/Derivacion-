@@ -1,4 +1,4 @@
-﻿export type CanalDefinitivo = 'VENTA DIRECTA' | 'PLANES DE AHORRO';
+export type CanalDefinitivo = 'VENTA DIRECTA' | 'PLANES DE AHORRO';
 export type TipoRegistro = 'Tradicional' | 'Planes';
 export interface Registration { id: string; tipo: TipoRegistro; fecha: string; }
 export interface Receipt { ok: true; id: string; cliente: string; asesor: string; }
@@ -54,7 +54,11 @@ export function queueRegistration(id: string, canal: CanalDefinitivo, onReceipt?
 export function stopReceiptListener(id: string) { listeners.delete(id); }
 export function flushRegistrations(): Promise<void> {
   if (running) return running;
-  running = flush().finally(() => { running = undefined; });
+  running = flush().finally(() => {
+    running = undefined;
+    // Items queued while the previous flush was in flight need immediate dispatch.
+    if (getPending().length > 0) void flushRegistrations();
+  });
   return running;
 }
 async function flush() {
@@ -64,10 +68,16 @@ async function flush() {
     try {
       const response = await fetch(url, {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ ...item, key }), redirect: 'follow', signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({ ...item, key }), redirect: 'follow', signal: AbortSignal.timeout(8000),
       });
       if (!response.ok) throw new Error('No se pudo contactar con Google Sheets.');
       const receipt = await response.json();
+      if (receipt.error === 'busy') {
+        // Breve espera y reintento inmediato si Apps Script estaba procesando otra fila
+        await new Promise(r => setTimeout(r, 600));
+        void flushRegistrations();
+        return;
+      }
       if (receipt.ok !== true || receipt.id !== item.id || typeof receipt.cliente !== 'string' || typeof receipt.asesor !== 'string') {
         throw new Error(receipt.error === 'unauthorized' ? 'La clave de esta tablet no es válida.' : 'El registro no fue confirmado por Google Sheets.');
       }

@@ -5,7 +5,7 @@ export const DEFAULT_CONFIG: Configuracion = {
   NOMBRE_CONCESIONARIO: 'Autosol',
   UMBRAL_DIFERENCIA: 2,
   ANIO_CORTE_USADO: 2016,
-  KM_CORTE_USADO: 100000,
+  KM_CORTE_USADO: 130000,
 };
 
 export const INITIAL_PREGUNTAS: Pregunta[] = [
@@ -170,7 +170,7 @@ export const INITIAL_OPCIONES: Opcion[] = [
   {
     pregunta_id: 'step_3b',
     opcion_id: 'o_step3b_hasta100',
-    texto: 'Hasta 100.000 km',
+    texto: 'Hasta 130.000 km',
     ayuda: 'El asesor evaluará tu vehículo.',
     puntos_directa: 1,
     puntos_planes: 0,
@@ -178,10 +178,10 @@ export const INITIAL_OPCIONES: Opcion[] = [
   {
     pregunta_id: 'step_3b',
     opcion_id: 'o_step3b_mas100',
-    texto: 'Más de 100.000 km',
+    texto: 'Más de 130.000 km',
     ayuda: 'El asesor te ayudará a evaluar las opciones para tu usado.',
     puntos_directa: 0,
-    puntos_planes: 99, // Regla fuerte
+    puntos_planes: 2,
   },
   {
     pregunta_id: 'step_3b',

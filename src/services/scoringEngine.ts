@@ -25,31 +25,6 @@ export function evaluarDerivacion(
     };
   }
 
-  // 2. Regla fuerte: Si quiere entregar su vehículo y supera los 100.000 km -> PLANES DE AHORRO
-  const resp3b = respuestas['step_3b'] || respuestas['p4'] || Object.values(respuestas).find((r) =>
-    r.opcion_id === 'o_step3b_mas100' ||
-    r.texto.toLowerCase().includes('más de 100.000') ||
-    r.texto.toLowerCase().includes('mas de 100.000')
-  );
-
-  if (resp3b && (resp3b.opcion_id === 'o_step3b_mas100' || resp3b.texto.toLowerCase().includes('más de 100.000') || resp3b.texto.toLowerCase().includes('mas de 100.000'))) {
-    return {
-      canal: 'PLANES DE AHORRO',
-      puntosDirecta: 0,
-      puntosPlanes: 10,
-      diferencia: 10,
-      umbral: 2,
-      motivosPrincipales: [
-        {
-          preguntaTexto: 'Regla comercial de toma de usados',
-          opcionTexto: 'Vehículo con más de 100.000 km (orienta a Plan de Ahorro para renovación)',
-          puntos: 10,
-        },
-      ],
-      esAccesoRapido: false,
-    };
-  }
-
   let totalDirecta = 0;
   let totalPlanes = 0;
   const contribuciones: MotivoContribucion[] = [];
@@ -58,13 +33,24 @@ export function evaluarDerivacion(
   Object.entries(respuestas).forEach(([pregId, opcion]) => {
     if (!opcion) return;
 
-    // STEP 3B: Hasta 100.000 km (+1 Directa)
-    if (opcion.opcion_id === 'o_step3b_hasta100' || opcion.texto.toLowerCase().includes('hasta 100.000')) {
+    // STEP 3B: Hasta 130.000 km (+1 Directa)
+    if (opcion.opcion_id === 'o_step3b_hasta100' || opcion.texto.toLowerCase().includes('hasta 130.000')) {
       totalDirecta += 1;
       contribuciones.push({
         preguntaTexto: 'Kilometraje del usado',
-        opcionTexto: 'Hasta 100.000 km (unidad apta para toma en Venta Directa)',
+        opcionTexto: 'Hasta 130.000 km (unidad apta para toma en Venta Directa)',
         puntos: 1,
+      });
+      return;
+    }
+
+    // STEP 3B: Más de 130.000 km (+2 Planes)
+    if (opcion.opcion_id === 'o_step3b_mas100' || opcion.texto.toLowerCase().includes('más de 130.000') || opcion.texto.toLowerCase().includes('mas de 130.000')) {
+      totalPlanes += 2;
+      contribuciones.push({
+        preguntaTexto: 'Kilometraje del usado',
+        opcionTexto: 'Más de 130.000 km (suma puntos hacia Plan de Ahorro)',
+        puntos: -2,
       });
       return;
     }
@@ -205,8 +191,8 @@ export function evaluarDerivacion(
 
   const dif = Math.abs(totalDirecta - totalPlanes);
 
-  // Si eligió conocer ambas alternativas y el puntaje está equilibrado
-  if (quiereConocerAmbas && dif <= 2) {
+  // Si eligió conocer ambas alternativas, siempre ofrecer la elección final de por cuál comenzar
+  if (quiereConocerAmbas) {
     return {
       canal: 'AMBAS ALTERNATIVAS',
       puntosDirecta: totalDirecta,

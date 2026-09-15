@@ -65,7 +65,7 @@ p_fast\t0\t¿Ya sabe qué modalidad quiere consultar?\tSi ya tiene decidido qué
 p1\t1\t¿En qué momento le gustaría adquirir el vehículo?\tEl plazo estimado define la disponibilidad inmediata de stock o la programación de cuotas.\tSTANDARD\t\tTRUE
 p2\t2\t¿Tiene actualmente un vehículo?\tPermite evaluar si interviene un vehículo en la operación.\tVEHICULO_GATEWAY\t\tTRUE
 p3\t3\t¿Tiene pensado entregar su vehículo como parte de pago?\tDefine si se contempla la toma de su usado en la operación.\tSTANDARD\tTIENE_VEHICULO\tTRUE
-p4\t4\t¿Cuántos kilómetros tiene aproximadamente su vehículo?\tVenta Directa recibe unidades de hasta 100.000 km como parte de pago.\tSTANDARD\tENTREGAR_USADO\tTRUE
+p4\t4\t¿Cuántos kilómetros tiene aproximadamente su vehículo?\tVenta Directa recibe unidades de hasta 130.000 km como parte de pago.\tSTANDARD\tENTREGAR_USADO\tTRUE
 p5\t5\t¿Cómo compró su vehículo anterior?\tModalidad utilizada en la compra de su vehículo previo.\tSTANDARD\t\tTRUE
 p5_repetir\t6\t¿Le gustaría repetir la misma modalidad?\tDefine si prefiere continuar con la misma experiencia o probar la otra alternativa.\tSTANDARD\tCOMPRA_TRADICIONAL_O_PLAN\tTRUE
 p6\t7\t¿Cómo tiene pensado afrontar la compra actualmente?\tEstructura de fondos y forma de pago contemplada.\tSTANDARD\t\tTRUE
@@ -83,8 +83,8 @@ p2\to_p2_no\tNo\tNo dispone de vehículo propio en este momento.\t0\t0
 p3\to_p3_si\tSí\tInterés en entregar el vehículo actual como parte de pago.\t0\t0
 p3\to_p3_conservar\tNo, quiero conservarlo\tMantendrá la unidad o la venderá de forma particular.\t0\t0
 p3\to_p3_nose\tTodavía no lo sé\tSin definición sobre la entrega del usado.\t0\t0
-p4\to_p4_hasta100\tHasta 100.000 km\tVenta Directa recibe la unidad como parte de pago.\t4\t0
-p4\to_p4_mas100\tMás de 100.000 km\tSupera el límite de toma para Venta Directa; orienta a Plan de Ahorro.\t0\t4
+p4\to_p4_hasta100\tHasta 130.000 km\tVenta Directa recibe la unidad como parte de pago.\t4\t0
+p4\to_p4_mas100\tMás de 130.000 km\tSupera el límite de toma para Venta Directa; orienta a Plan de Ahorro.\t0\t4
 p4\to_p4_nose\tNo sabe\tKilometraje a verificar con el asesor comercial.\t0\t0
 p5\to_p5_tradicional\tVenta tradicional\tCompra de contado, crédito prendario o entrega de usado en concesionario.\t1\t0
 p5\to_p5_plan\tPlan de Ahorro\tAdquisición mediante cuotas de plan de ahorro previo.\t0\t1
@@ -105,7 +105,7 @@ p7\to_p7_ambas\tQuiero conocer ambas alternativas\tDesea información comparativ
 NOMBRE_CONCESIONARIO\tAutosol
 UMBRAL_DIFERENCIA\t3
 ANIO_CORTE_USADO\t2016
-KM_CORTE_USADO\t100000`;
+KM_CORTE_USADO\t130000`;
 
   return (
     <div

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getConnection, getRegistrationStatus, saveConnection, flushRegistrations } from '../services/registrationService';
 
 // Setup is outside the customer flow. Knowing this URL grants no Sheet access:
@@ -22,11 +22,18 @@ export function RegistrationSetup() {
     </form>
     <p role="status" className="text-sm">{message}</p>
     <div className="rounded-xl bg-slate-100 p-4 text-sm space-y-2">
-      <p>{status.configured ? 'Conexión configurada' : 'Conexión pendiente de configurar'}</p>
-      <p>Derivaciones pendientes de envío: {status.pending}</p>
-      {status.error && <p className="text-red-700">{status.error}</p>}
+      <p className={status.configured ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-semibold'}>
+        {status.configured ? '✓ Conexión configurada' : '⚠ Conexión no configurada (falta la clave o URL)'}
+      </p>
+      <p>Derivaciones pendientes de envío: <strong>{status.pending}</strong></p>
+      {status.error && <p className="text-red-700 font-medium">Error: {status.error}</p>}
       {status.volatileStorage && <p className="text-red-700">No cierres esta pestaña: hay registros guardados solo en memoria.</p>}
     </div>
-    <a className="inline-block py-3 underline" href={import.meta.env.BASE_URL}>Volver al inicio</a>
+    <div className="text-xs text-slate-500 space-y-1">
+      <p><strong>¿Dónde encuentro la clave?</strong></p>
+      <p>1. En tu Google Sheet, abrí el menú superior <strong>Autosol → Ver clave de conexión</strong>.</p>
+      <p>2. Si no aparece el menú, en Apps Script ejecutá la función <code>prepararRegistro</code> y recargá la planilla.</p>
+    </div>
+    <a className="inline-block py-3 underline cursor-pointer text-slate-700 hover:text-slate-900" href="#" onClick={(e) => { e.preventDefault(); window.location.hash = ''; }}>Volver al inicio</a>
   </main>;
 }

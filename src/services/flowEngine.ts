@@ -4,7 +4,7 @@ export function formatPreguntaTexto(pregunta: Pregunta, config?: Configuracion):
   if (!pregunta || !pregunta.pregunta) return '';
 
   const anio = config?.ANIO_CORTE_USADO || 2016;
-  const kmFormatted = Number(config?.KM_CORTE_USADO || 100000).toLocaleString('es-AR');
+  const kmFormatted = Number(config?.KM_CORTE_USADO || 130000).toLocaleString('es-AR');
 
   return pregunta.pregunta
     .replace('{ANIO_CORTE_USADO}', String(anio))
@@ -38,8 +38,11 @@ export function calcularPuntosParciales(respuestas: Record<string, Opcion>): { d
   // Step 3b
   const r3b = respuestas['step_3b'];
   if (r3b) {
-    if (r3b.opcion_id === 'o_step3b_hasta100' || r3b.texto.toLowerCase().includes('hasta 100.000')) {
+    if (r3b.opcion_id === 'o_step3b_hasta100' || r3b.texto.toLowerCase().includes('hasta 130.000')) {
       directa += 1;
+    }
+    if (r3b.opcion_id === 'o_step3b_mas100' || r3b.texto.toLowerCase().includes('más de 130.000') || r3b.texto.toLowerCase().includes('mas de 130.000')) {
+      planes += 2;
     }
   }
 
@@ -116,16 +119,9 @@ export function obtenerSiguientePaso(
 
   // STEP 3B: ¿Cuántos kilómetros tiene aproximadamente?
   if (currentStepId === 'step_3b') {
-    const supera100k =
-      opcionElegida.opcion_id === 'o_step3b_mas100' ||
-      opcionElegida.texto.toLowerCase().includes('más de 100.000') ||
-      opcionElegida.texto.toLowerCase().includes('mas de 100.000');
-
-    if (supera100k) {
-      // Regla clave: si quiere entregar su vehículo y supera los 100.000 km, derivar a PLANES DE AHORRO
-      return { nextStepId: null, isImmediateFinish: true, canalFinalDirecto: 'PLANES DE AHORRO' };
-    }
-    // Hasta 100.000 km o No sabe -> continuar al bloque central de puntaje
+    // All answers continue to the scoring block. The 100k+ answer adds
+    // points toward Planes via calcularPuntosParciales but does not
+    // short-circuit the questionnaire.
     return { nextStepId: 'step_2a' };
   }
 
@@ -145,13 +141,13 @@ export function obtenerSiguientePaso(
       opcionElegida.opcion_id === 'o_step4a_ambas' ||
       opcionElegida.texto.toLowerCase().includes('ambas alternativas');
 
-    const { directa, planes } = calcularPuntosParciales(respuestasActualizadas);
-    const dif = Math.abs(directa - planes);
-
-    // Si pidió conocer ambas alternativas y la diferencia es pequeña (<= 2) -> AMBAS ALTERNATIVAS
-    if (quiereAmbas && dif <= 2) {
+    // Siempre que elija conocer ambas alternativas, darle la opción de por cuál comenzar
+    if (quiereAmbas) {
       return { nextStepId: null, isImmediateFinish: true, canalFinalDirecto: 'AMBAS ALTERNATIVAS' };
     }
+
+    const { directa, planes } = calcularPuntosParciales(respuestasActualizadas);
+    const dif = Math.abs(directa - planes);
 
     // Si el resultado ya es claro (diferencia >= 2) -> Finalizar
     if (dif >= 2) {

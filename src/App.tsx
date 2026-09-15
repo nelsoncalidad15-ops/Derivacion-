@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppData, CanalDerivacion, Opcion, ResultadoDerivacion } from './types';
 import { INITIAL_APP_DATA, INITIAL_PREGUNTAS, INITIAL_OPCIONES } from './data/initialData';
 import { loadAppData } from './services/sheetsService';
@@ -20,9 +20,16 @@ export default function App() {
   const [respuestas, setRespuestas] = useState<Record<string, Opcion>>({});
   const [resultado, setResultado] = useState<ResultadoDerivacion | null>(null);
   const [asesor, setAsesor] = useState('');
+  const [isConfiguring, setIsConfiguring] = useState(() => window.location.hash === '#configurar');
   const finalized = useRef(false);
   const visitId = useRef(crypto.randomUUID());
   const main = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const handleHash = () => setIsConfiguring(window.location.hash === '#configurar');
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
 
   useEffect(() => {
     // Existing questionnaire configuration remains preconfigured, outside the client UI.
@@ -31,7 +38,7 @@ export default function App() {
       if (sheetId) void loadAppData(sheetId).then(setAppData);
     } catch { /* Base questions remain usable if local storage is unavailable. */ }
     void flushRegistrations();
-    const interval = window.setInterval(() => void flushRegistrations(), 15000);
+    const interval = window.setInterval(() => void flushRegistrations(), 5000);
     const retry = () => void flushRegistrations();
     window.addEventListener('online', retry);
     return () => { clearInterval(interval); window.removeEventListener('online', retry); };
@@ -98,7 +105,7 @@ export default function App() {
     if (resultado) finish({ ...resultado, canal });
   };
 
-  if (window.location.hash === '#configurar') return <RegistrationSetup />;
+  if (isConfiguring) return <RegistrationSetup />;
   return (
     <div className={`app-shell flex flex-col text-slate-900 antialiased ${modoFlow === 'FAST_TRACK' ? 'app-home' : ''}`}>
       <Navbar onReset={handleResetSurvey} />

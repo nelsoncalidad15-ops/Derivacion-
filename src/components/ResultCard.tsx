@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { ResultadoDerivacion } from '../types';
 
@@ -25,7 +25,6 @@ export const ResultCard: React.FC<ResultCardProps> = ({ resultado, asesor, onNue
       <h1 id="result-title" className="text-3xl sm:text-4xl font-semibold tracking-tight">
         {resultado.canal === 'VENTA DIRECTA' ? 'Venta tradicional' : 'Planes de ahorro'}
       </h1>
-      {asesor && <p className="mt-4 text-lg">Te atenderá <strong>{asesor}</strong>.</p>}
       <p className="mt-7 text-xl font-semibold">¡Gracias por visitarnos!</p>
       <p className="mt-3 text-blue-100 leading-relaxed">Por favor, esperá unos minutos en recepción.<br />El equipo de esta área te acompañará.</p>
       <button onClick={onNuevoIngreso} className="mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-white text-[#001e50] px-7 py-3 min-h-12 font-semibold">
