@@ -1,5 +1,9 @@
 ﻿import { test, expect } from '@playwright/test';
 
+const scriptUrl = 'https://script.google.com/macros/s/AKfycbzqNzvh_c1pLRmxPe2dEW1KluZ9hsGmBoP6u518t0NBmNiSzloFpPoy-8wlQkHCo3ha_A/exec';
+// Never write test visits to the live spreadsheet.
+test.beforeEach(async ({ page }) => { await page.route(scriptUrl, route => route.abort()); });
+
 for (const [width, height] of [[768,1024], [1024,768], [1280,800], [820,1180], [360,800]]) {
   test(`Interfaz táctil ${width}×${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
@@ -46,22 +50,28 @@ test('Una sola derivación, cierre automático y nuevo cliente independiente', a
 });
 
 test('Un envío no confirmado persiste y se reintenta con el mismo identificador', async ({ page }) => {
-  const url = 'https://script.google.com/macros/s/test-registration/exec';
-  await page.addInitScript(({ url }) => localStorage.setItem('AUTOSOL_REGISTRO_CONEXION', JSON.stringify({ url, key: 'test-key-for-browser-at-least-32-chars' })), { url });
+  await page.clock.install();
+  const url = scriptUrl;
   const sent: any[] = [];
   let succeed = false;
   await page.route(url, async route => {
     const body = route.request().postDataJSON(); sent.push(body);
+    expect(body).not.toHaveProperty('key');
     if (!succeed) await route.fulfill({ json: { ok: false, error: 'busy' } });
     else await route.fulfill({ json: { ok: true, id: body.id, cliente: 'Cliente 1', asesor: '' } });
   });
   await page.goto('./');
   await page.getByRole('button', { name: /Venta directa/ }).click();
   await expect.poll(() => sent.length).toBe(1);
+  await page.goto('./#configurar');
+  await expect(page.getByText(/Error: Google Sheets está ocupado/)).toBeVisible();
+  const attempts = sent.length;
+  await page.clock.fastForward(1000);
+  expect(sent.length).toBe(attempts);
   expect(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('AUTOSOL_PENDIENTE_')).length)).toBe(1);
   succeed = true;
   await page.reload();
-  await expect.poll(() => sent.length).toBe(2);
+  await expect.poll(() => sent.length).toBe(attempts + 1);
   expect(sent[0].id).toBe(sent[1].id);
   await expect.poll(() => page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('AUTOSOL_PENDIENTE_')).length)).toBe(0);
 });

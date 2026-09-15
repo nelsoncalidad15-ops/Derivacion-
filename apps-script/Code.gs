@@ -19,7 +19,6 @@ function getBook_() {
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Autosol')
     .addItem('Preparar registro', 'prepararRegistro')
-    .addItem('Ver clave de conexión', 'verClaveTablet')
     .addItem('Activar ronda', 'activarRonda')
     .addItem('Desactivar ronda', 'desactivarRonda')
     .addItem('Asignar pendientes', 'asignarPendientes')
@@ -76,7 +75,6 @@ function prepararRegistro() {
   equipo.getRange(2, 4, equipo.getMaxRows() - 1, 2).setDataValidation(
     SpreadsheetApp.newDataValidation().requireCheckbox().build());
   const props = PropertiesService.getScriptProperties();
-  if (!props.getProperty('TABLET_KEY')) props.setProperty('TABLET_KEY', Utilities.getUuid() + Utilities.getUuid());
   if (!props.getProperty('RONDA_ACTIVA')) props.setProperty('RONDA_ACTIVA', 'false');
   if (!book.getSheetByName('Resumen')) {
     const summary = book.insertSheet('Resumen');
@@ -98,10 +96,6 @@ function prepararRegistro() {
   SpreadsheetApp.flush();
 }
 
-function verClaveTablet() {
-  const key = PropertiesService.getScriptProperties().getProperty('TABLET_KEY');
-  SpreadsheetApp.getUi().alert('Clave para configurar las tablets', key || 'Primero ejecutá Preparar registro.', SpreadsheetApp.getUi().ButtonSet.OK);
-}
 function activarRonda() {
   PropertiesService.getScriptProperties().setProperty('RONDA_ACTIVA', 'true');
   asignarPendientes();
@@ -118,8 +112,8 @@ function doPost(e) {
     if (!e || !e.postData || e.postData.contents.length > 2048) return json_({ ok: false, error: 'invalid' });
     payload = JSON.parse(e.postData.contents);
   } catch (_) { return json_({ ok: false, error: 'invalid' }); }
-  const key = PropertiesService.getScriptProperties().getProperty('TABLET_KEY');
-  if (!key || payload.key !== key) return json_({ ok: false, error: 'unauthorized' });
+  // Public write endpoint; validate every request before accessing the spreadsheet.
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return json_({ ok: false, error: 'invalid' });
   if (!/^[a-f0-9-]{36}$/i.test(payload.id || '') || !['Tradicional', 'Planes'].includes(payload.tipo) ||
       typeof payload.fecha !== 'string' || !Number.isFinite(Date.parse(payload.fecha))) return json_({ ok: false, error: 'invalid' });
   const lock = LockService.getScriptLock();

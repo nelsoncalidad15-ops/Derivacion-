@@ -40,7 +40,7 @@ test('Todas las rutas terminan sin ciclos y los empates permiten elección final
 
 function backend() {
   const records: any[][] = [['Cliente', 'Tipo', 'Asesor', 'Ocupado', 'Fecha', 'ID', 'Estado', 'Asesor ID']];
-  const props = new Map([['TABLET_KEY', 'test-key'], ['RONDA_ACTIVA', 'false']]);
+  const props = new Map([['RONDA_ACTIVA', 'false']]);
   const tables: Record<string, any[][]> = {
     Derivaciones: records,
     Equipo: [['ID', 'Nombre', 'Tipo', 'Activo', 'Ocupado', 'Última asignación']],
@@ -67,10 +67,11 @@ function backend() {
   vm.runInContext(readFileSync(new URL('../apps-script/Code.gs', import.meta.url), 'utf8'), context);
   return { context, records, tables, props, book, send: (payload: any) => context.doPost({ postData: { contents: JSON.stringify(payload) } }) };
 }
-test('Apps Script exige clave, valida tipo y no duplica un reintento', () => {
+test('Apps Script acepta registros sin clave, valida tipo y no duplica un reintento', () => {
   const { send, records } = backend();
-  const payload = { key: 'test-key', id: '11111111-1111-4111-8111-111111111111', tipo: 'Tradicional', fecha: new Date().toISOString() };
-  assert.equal(send({ ...payload, key: 'wrong' }).error, 'unauthorized');
+  const payload = { id: '11111111-1111-4111-8111-111111111111', tipo: 'Tradicional', fecha: new Date().toISOString() };
+  assert.equal(send(null).error, 'invalid');
+  assert.equal(send({}).error, 'invalid');
   assert.equal(send({ ...payload, tipo: 'Mixto' }).error, 'invalid');
   assert.equal(records.length, 1);
   const first = send(payload);
@@ -104,7 +105,7 @@ test('La casilla reasigna, conserva historial y recupera pendientes al liberar u
   const { context, tables, props, book, send, records } = backend();
   props.set('RONDA_ACTIVA', 'true');
   tables.Equipo.push(['a', 'Ana', 'Tradicional', true, false, ''], ['b', 'Bruno', 'Tradicional', true, false, '']);
-  const payload = { key: 'test-key', id: '11111111-1111-4111-8111-111111111111', tipo: 'Tradicional', fecha: new Date().toISOString() };
+  const payload = { id: '11111111-1111-4111-8111-111111111111', tipo: 'Tradicional', fecha: new Date().toISOString() };
   assert.equal(send(payload).asesor, 'Ana');
   const event = { range: { getSheet: () => book.getSheetByName('Derivaciones'), getColumn: () => 4, getRow: () => 2, getNumRows: () => 1, getNumColumns: () => 1 } };
   records[1][3] = true;

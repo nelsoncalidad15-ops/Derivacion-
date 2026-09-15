@@ -6,12 +6,13 @@ Sheet previsto: https://docs.google.com/spreadsheets/d/1aCByYYdl-2qpx4-ZFtLZty5G
 
 1. Abrir el Sheet → **Extensiones → Apps Script**. Copiar `Code.gs` de esta carpeta al editor y guardar.
 2. Ejecutar `prepararRegistro` y autorizar los permisos. Crea `Derivaciones`, `Equipo`, `Movimientos` y `Resumen` sin borrar las otras hojas. La ronda queda desactivada. Configurar la zona horaria del proyecto como Argentina.
-3. **Implementar → Nueva implementación → Aplicación web**: ejecutar como propietario, acceso **Cualquier persona**. Copiar la URL que termina en `/exec`. El Sheet debe permanecer privado. El acceso público permite llegar al script; cada escritura exige la clave de tablet validada por el servidor. No se expone ninguna lectura de filas.
-4. Volver al Sheet y recargar. Menú **Autosol → Ver clave de conexión**.
-5. En cada tablet abrir https://nelsoncalidad15-ops.github.io/Derivacion-/#configurar. Pegar URL y clave, guardar y volver al inicio. La clave se guarda solo en ese navegador; no se publica en GitHub ni en el código del sitio. El enlace de configuración no es una autenticación: se necesita la clave para escribir.
-6. Hacer una derivación de prueba por cada área. Verificar las filas y que en la configuración queden cero envíos pendientes. Las pruebas cuentan como registros; identificarlas por su fecha antes de usarlo con clientes.
+3. Si ya existe la aplicación web, abrir **Implementar → Administrar implementaciones → Editar (lápiz) → Versión: Nueva versión → Implementar**. Así se conserva la URL `/exec` que usa la web. Configurar **Ejecutar como: Yo** y **Acceso: Cualquier persona**.
+4. Publicar también la web actualizada. Usa directamente la URL de Apps Script incluida en `src/services/registrationService.ts`; no requiere clave ni configuración por tablet. Las conexiones antiguas guardadas en el navegador ya no se usan.
+5. Hacer una derivación de prueba y verificar la nueva fila en **Derivaciones**. En `#configurar` se puede consultar el estado y reintentar pendientes. Las pruebas cuentan como registros.
 
-No hay que publicar el Sheet ni compartirlo con los clientes. La clave permite agregar registros, no leer ni administrar el Sheet. Para revocarla, cambiar `TABLET_KEY` en Propiedades del script y configurar nuevamente las tablets. Usar tablets controladas: quien acceda a su almacenamiento puede recuperar esta clave. No usarla como contraseña personal.
+El Sheet puede permanecer privado. El endpoint de escritura es público y no exige clave: cualquiera que conozca la URL puede enviar registros válidos. No ofrece una lectura general de la planilla. Conserva validación de datos, UUID para evitar duplicados y bloqueo para asignar números.
+
+Si aparece un error que pide actualizar Apps Script, la URL todavía ejecuta la versión anterior que exigía clave. Guardar el código en el editor no actualiza por sí solo la implementación.
 
 ## Registro y cortes de conexión
 
@@ -20,8 +21,8 @@ Columnas: **Cliente | Tipo | Asesor | Reasignar: asesor ocupado | Fecha | ID | E
 - Tipos definitivos: `Tradicional` y `Planes`. Un empate pide al cliente elegir con qué equipo empezar.
 - La numeración Cliente 1, Cliente 2… la asigna el servidor bajo un bloqueo; varias tablets comparten secuencia.
 - Cada atención lleva un UUID. Los reintentos devuelven la misma fila y no la duplican.
-- El navegador guarda envíos pendientes y reintenta cada 15 segundos o al volver la conexión. Solo elimina el pendiente al recibir confirmación válida. No borrar datos del navegador si hay pendientes.
-- Sin URL/clave, los registros quedan en esa tablet; **no están todavía en Google Sheets**. La pantalla de configuración muestra pendientes y errores.
+- El navegador guarda envíos pendientes y reintenta cada 5 segundos o al volver la conexión, sin superponer envíos. Espera hasta 30 segundos por respuesta y solo elimina el pendiente al recibir confirmación válida. No borrar datos del navegador si hay pendientes.
+- Si el envío falla, los registros quedan pendientes en esa tablet hasta recibir confirmación de Google Sheets. La pantalla de estado muestra pendientes y errores.
 - La fecha corresponde a la finalización en la tablet. Durante cortes de red, el número sigue el orden en que el servidor recibió las atenciones.
 
 ## Ronda preparada, desactivada por defecto

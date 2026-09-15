@@ -27,10 +27,10 @@ La identidad visual utiliza el logo y la fotografía de Autosol proporcionados p
 - Cabecera compacta, sin configuración en el recorrido del cliente.
 - Cierre con área de atención, agradecimiento y retorno automático a los 20 segundos.
 - Las respuestas empatadas piden una elección final: no se registra un tipo mixto.
-- Registro privado mediante Apps Script, con UUID, confirmación de escritura y reintentos.
+- Registro directo mediante Apps Script, sin clave por tablet, con UUID, confirmación de escritura y reintentos.
 - Ronda opcional por área, desactivada por defecto, con disponibilidad y recuentos por asesor.
 
-La integración está preparada, pero requiere desplegar Apps Script y configurar cada tablet antes de enviar datos al Sheet. Ver [activación y funcionamiento](apps-script/README.md).
+La web usa la URL de Apps Script predefinida, sin vinculación por tablet. Requiere actualizar la implementación de Apps Script y publicar la web para activar el envío sin clave. Ver [activación y funcionamiento](apps-script/README.md).
 
 ```sh
 npm test

@@ -2,8 +2,6 @@ export type CanalDefinitivo = 'VENTA DIRECTA' | 'PLANES DE AHORRO';
 export type TipoRegistro = 'Tradicional' | 'Planes';
 export interface Registration { id: string; tipo: TipoRegistro; fecha: string; }
 export interface Receipt { ok: true; id: string; cliente: string; asesor: string; }
-export interface Connection { url: string; key: string; }
-const CONNECTION = 'AUTOSOL_REGISTRO_CONEXION';
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzqNzvh_c1pLRmxPe2dEW1KluZ9hsGmBoP6u518t0NBmNiSzloFpPoy-8wlQkHCo3ha_A/exec';
 const PREFIX = 'AUTOSOL_PENDIENTE_';
 const memory = new Map<string, Registration>();
@@ -12,20 +10,6 @@ let lastError = '';
 let volatileStorage = false;
 const listeners = new Map<string, (receipt: Receipt) => void>();
 
-export function getConnection(): Connection {
-  try {
-    const saved = JSON.parse(localStorage.getItem(CONNECTION) || 'null');
-    return {
-      url: typeof saved?.url === 'string' && saved.url ? saved.url : DEFAULT_SCRIPT_URL,
-      key: typeof saved?.key === 'string' ? saved.key : '',
-    };
-  } catch { return { url: DEFAULT_SCRIPT_URL, key: '' }; }
-}
-export function saveConnection(connection: Connection) {
-  if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(connection.url)) throw new Error('Pegá la URL de Apps Script que termina en /exec.');
-  if (connection.key.length < 32) throw new Error('Usá la clave generada en Apps Script.');
-  localStorage.setItem(CONNECTION, JSON.stringify(connection));
-}
 export function getPending(): Registration[] {
   const entries = new Map(memory);
   try {
@@ -39,7 +23,7 @@ export function getPending(): Registration[] {
   return [...entries.values()].sort((a,b) => a.fecha.localeCompare(b.fecha));
 }
 export function getRegistrationStatus() {
-  return { pending: getPending().length, error: lastError, volatileStorage, configured: Boolean(getConnection().url && getConnection().key) };
+  return { pending: getPending().length, error: lastError, volatileStorage, configured: true };
 }
 export function queueRegistration(id: string, canal: CanalDefinitivo, onReceipt?: (receipt: Receipt) => void) {
   const item: Registration = { id, tipo: canal === 'VENTA DIRECTA' ? 'Tradicional' : 'Planes', fecha: new Date().toISOString() };
@@ -56,30 +40,31 @@ export function flushRegistrations(): Promise<void> {
   if (running) return running;
   running = flush().finally(() => {
     running = undefined;
-    // Items queued while the previous flush was in flight need immediate dispatch.
-    if (getPending().length > 0) void flushRegistrations();
   });
   return running;
 }
 async function flush() {
-  const { url, key } = getConnection();
-  if (!url || !key) return;
-  for (const item of getPending()) {
+  // Refresh after each acknowledgement to include arrivals during an active request.
+  // On failure, leave retrying to the app timer or the online event.
+  let item: Registration | undefined;
+  while ((item = getPending()[0])) {
     try {
-      const response = await fetch(url, {
+      const response = await fetch(DEFAULT_SCRIPT_URL, {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ ...item, key }), redirect: 'follow', signal: AbortSignal.timeout(8000),
+        body: JSON.stringify(item), redirect: 'follow', signal: AbortSignal.timeout(30000),
       });
       if (!response.ok) throw new Error('No se pudo contactar con Google Sheets.');
       const receipt = await response.json();
       if (receipt.error === 'busy') {
-        // Breve espera y reintento inmediato si Apps Script estaba procesando otra fila
-        await new Promise(r => setTimeout(r, 600));
-        void flushRegistrations();
-        return;
+        throw new Error('Google Sheets está ocupado. Se reintentará automáticamente.');
       }
       if (receipt.ok !== true || receipt.id !== item.id || typeof receipt.cliente !== 'string' || typeof receipt.asesor !== 'string') {
-        throw new Error(receipt.error === 'unauthorized' ? 'La clave de esta tablet no es válida.' : 'El registro no fue confirmado por Google Sheets.');
+        const errors: Record<string, string> = {
+          unauthorized: 'Actualizá la implementación de Apps Script: todavía solicita la clave anterior.',
+          not_configured: 'Falta ejecutar prepararRegistro en Apps Script.',
+          server_error: 'Apps Script no pudo guardar el registro. Revisá las ejecuciones del script.',
+        };
+        throw new Error(errors[receipt.error] || 'El registro no fue confirmado por Google Sheets.');
       }
       // Only discard after explicit acknowledgement. A retry reuses the same ID.
       localStorage.removeItem(PREFIX + item.id);
