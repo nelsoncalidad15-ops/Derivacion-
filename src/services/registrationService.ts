@@ -4,6 +4,7 @@ export interface Registration { id: string; tipo: TipoRegistro; fecha: string; }
 export interface Receipt { ok: true; id: string; cliente: string; asesor: string; }
 export interface Connection { url: string; key: string; }
 const CONNECTION = 'AUTOSOL_REGISTRO_CONEXION';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzqNzvh_c1pLRmxPe2dEW1KluZ9hsGmBoP6u518t0NBmNiSzloFpPoy-8wlQkHCo3ha_A/exec';
 const PREFIX = 'AUTOSOL_PENDIENTE_';
 const memory = new Map<string, Registration>();
 let running: Promise<void> | undefined;
@@ -12,8 +13,13 @@ let volatileStorage = false;
 const listeners = new Map<string, (receipt: Receipt) => void>();
 
 export function getConnection(): Connection {
-  try { return JSON.parse(localStorage.getItem(CONNECTION) || 'null') || { url: '', key: '' }; }
-  catch { return { url: '', key: '' }; }
+  try {
+    const saved = JSON.parse(localStorage.getItem(CONNECTION) || 'null');
+    return {
+      url: typeof saved?.url === 'string' && saved.url ? saved.url : DEFAULT_SCRIPT_URL,
+      key: typeof saved?.key === 'string' ? saved.key : '',
+    };
+  } catch { return { url: DEFAULT_SCRIPT_URL, key: '' }; }
 }
 export function saveConnection(connection: Connection) {
   if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(connection.url)) throw new Error('Pegá la URL de Apps Script que termina en /exec.');
