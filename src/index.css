@@ -24,7 +24,7 @@
 .welcome h1 span { color:#bdd5e1; font-weight:400; }
 .welcome-copy p { color:#d4e1ea; font-size:15px; line-height:1.9; }
 .welcome-options { display:flex; flex-direction:column; gap:12px; }
-.options-label { font-size:10px; letter-spacing:.16em; color:#d0e0eb; margin-bottom:6px; }
+.options-label { font-size:clamp(14px, 1.4vw, 17px); font-weight:700; line-height:1.5; letter-spacing:.08em; color:#fff; margin-bottom:10px; text-shadow:0 1px 6px rgba(0,0,0,.3); }
 .route-card { display:flex; align-items:center; gap:18px; padding:25px 22px; border:1px solid #ffffff38; border-radius:16px; text-align:left; background:rgba(255,255,255,.09); backdrop-filter:blur(16px); transition:background .2s, transform .2s; }
 .route-card:hover { background:rgba(255,255,255,.19); transform:translateY(-2px); }
 .route-card strong { display:block; font-size:17px; font-weight:600; letter-spacing:-.025em; }
