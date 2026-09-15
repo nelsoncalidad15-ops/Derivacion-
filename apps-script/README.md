@@ -16,6 +16,12 @@ Si aparece un error que pide actualizar Apps Script, la URL todavía ejecuta la 
 
 ## Registro y cortes de conexión
 
+### Corregir registros que aparecen después de muchas filas vacías
+
+Reemplazar `Code.gs` por la versión actual y ejecutar **ordenarFilasRegistro** una vez desde Apps Script. Quita las filas vacías o con solo casillas desmarcadas en Derivaciones y Equipo, conserva los datos y su orden, y limita las casillas a filas con cliente o ID de asesor. No reinicia la numeración. Luego actualizar la implementación existente a **Nueva versión** para que los envíos usen la corrección.
+
+Los nuevos registros se escriben después del último registro real, ignorando casillas desmarcadas al final. Al ingresar un ID de asesor en Equipo, el disparador instalado añade las casillas y el selector de tipo a esa fila.
+
 Columnas: **Cliente | Tipo | Asesor | Reasignar: asesor ocupado | Fecha | ID | Estado | Asesor ID**.
 
 - Tipos definitivos: `Tradicional` y `Planes`. Un empate pide al cliente elegir con qué equipo empezar.

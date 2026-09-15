@@ -19,6 +19,7 @@ function getBook_() {
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Autosol')
     .addItem('Preparar registro', 'prepararRegistro')
+    .addItem('Ordenar filas y casillas', 'ordenarFilasRegistro')
     .addItem('Activar ronda', 'activarRonda')
     .addItem('Desactivar ronda', 'desactivarRonda')
     .addItem('Asignar pendientes', 'asignarPendientes')
@@ -34,7 +35,6 @@ function embellecerHoja() {
       ledger.hideColumns(5, 4); // Oculta Fecha, ID, Estado, Asesor ID (columnas E, F, G, H)
     }
     if (ledger.getMaxRows() > 1) {
-      ledger.getRange(2, 4, ledger.getMaxRows() - 1, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireCheckbox().build());
       ledger.getRange(2, 5, ledger.getMaxRows() - 1, 1).setNumberFormat('dd/MM/yyyy HH:mm:ss');
     }
   } catch (_) {}
@@ -68,12 +68,8 @@ function prepararRegistro() {
     sheet.getRange(1, 1, 1, headers.length).setBackground('#001e50').setFontColor('#ffffff').setFontWeight('bold');
     sheet.autoResizeColumns(1, headers.length);
   });
-  const equipo = book.getSheetByName('Equipo');
-  // Validation does not overwrite existing team availability or assignment data.
-  equipo.getRange(2, 3, equipo.getMaxRows() - 1, 1).setDataValidation(
-    SpreadsheetApp.newDataValidation().requireValueInList(['Tradicional', 'Planes'], true).setAllowInvalid(false).build());
-  equipo.getRange(2, 4, equipo.getMaxRows() - 1, 2).setDataValidation(
-    SpreadsheetApp.newDataValidation().requireCheckbox().build());
+  actualizarCasillas_(book.getSheetByName('Equipo'));
+  actualizarCasillas_(book.getSheetByName('Derivaciones'));
   const props = PropertiesService.getScriptProperties();
   if (!props.getProperty('RONDA_ACTIVA')) props.setProperty('RONDA_ACTIVA', 'false');
   if (!book.getSheetByName('Resumen')) {
@@ -106,6 +102,54 @@ function json_(value) { return ContentService.createTextOutput(JSON.stringify(va
 function rows_(sheet) { return sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues() : []; }
 function receipt_(row) { return { ok: true, id: row[5], cliente: row[0], asesor: row[2] || '' }; }
 
+// An unchecked checkbox is FALSE, not an actual registration or team member.
+function tieneDatos_(row, checkboxColumns) {
+  return row.some((value, index) => value !== '' && value !== null && value !== undefined &&
+    !(checkboxColumns.includes(index) && value === false));
+}
+
+function actualizarCasillas_(sheet) {
+  const team = sheet.getName() === 'Equipo';
+  const count = sheet.getMaxRows() - 1;
+  if (count < 1) return;
+  sheet.getRange(2, team ? 3 : 4, count, team ? 3 : 1).clearDataValidations();
+  const checkbox = SpreadsheetApp.newDataValidation().requireCheckbox().build();
+  rows_(sheet).forEach((row, index) => {
+    if (!row[0]) return;
+    sheet.getRange(index + 2, 4, 1, team ? 2 : 1).setDataValidation(checkbox);
+    if (team) sheet.getRange(index + 2, 3).setDataValidation(
+      SpreadsheetApp.newDataValidation().requireValueInList(['Tradicional', 'Planes'], true).setAllowInvalid(false).build());
+  });
+}
+
+// Remove only empty rows or rows containing unchecked placeholders. Deleting
+// bottom-up preserves existing values, formulas, IDs, advisor flags and order.
+function ordenarFilasRegistro() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const book = getBook_();
+    ['Derivaciones', 'Equipo'].forEach(name => {
+      const sheet = book.getSheetByName(name);
+      if (!sheet) return;
+      const rows = rows_(sheet);
+      const formulas = rows.length ? sheet.getRange(2, 1, rows.length, sheet.getLastColumn()).getFormulas() : [];
+      const checkboxColumns = name === 'Equipo' ? [3, 4] : [3];
+      let end = -1;
+      for (let i = rows.length - 1; i >= -1; i--) {
+        const empty = i >= 0 && !tieneDatos_(rows[i], checkboxColumns) && !formulas[i].some(Boolean);
+        if (empty && end < 0) end = i;
+        if (!empty && end >= 0) {
+          sheet.deleteRows(i + 3, end - i);
+          end = -1;
+        }
+      }
+      actualizarCasillas_(sheet);
+    });
+    SpreadsheetApp.flush();
+  } finally { lock.releaseLock(); }
+}
+
 function doPost(e) {
   let payload;
   try {
@@ -137,7 +181,14 @@ function doPost(e) {
     const advisor = rondaActiva_() ? chooseAdvisor_(rows_(book.getSheetByName('Equipo')), existing, payload.tipo) : null;
     const row = ['Cliente ' + number, payload.tipo, advisor ? advisor.name : '', false, new Date(payload.fecha), payload.id,
       rondaActiva_() ? (advisor ? 'Asignado' : 'Sin asesor disponible') : 'Solo área', advisor ? advisor.id : ''];
-    ledger.appendRow(row);
+    // Ignore trailing FALSE placeholders left by earlier checkbox setup.
+    let last = existing.length - 1;
+    while (last >= 0 && !tieneDatos_(existing[last], [3])) last--;
+    const targetRow = last + 3;
+    if (targetRow > ledger.getMaxRows()) ledger.insertRowsAfter(ledger.getMaxRows(), 1);
+    ledger.getRange(targetRow, 1, 1, row.length).setValues([row]);
+    ledger.getRange(targetRow, 4).setDataValidation(SpreadsheetApp.newDataValidation().requireCheckbox().build());
+    ledger.getRange(targetRow, 5).setNumberFormat('dd/MM/yyyy HH:mm:ss');
     if (advisor) book.getSheetByName('Equipo').getRange(advisor.row, 6).setValue(new Date());
     SpreadsheetApp.flush();
     return json_(receipt_(row));
@@ -158,11 +209,12 @@ function chooseAdvisor_(team, registrations, tipo, excludedId) {
 }
 
 function alEditarRegistro(e) {
-  if (!e || !e.range || !rondaActiva_()) return;
+  if (!e || !e.range) return;
   const sheet = e.range.getSheet();
   const book = getBook_();
   if (sheet.getParent().getId() !== book.getId()) return;
-  if (sheet.getName() === 'Equipo') { asignarPendientes(); return; }
+  if (sheet.getName() === 'Equipo') { actualizarCasillas_(sheet); asignarPendientes(); return; }
+  if (!rondaActiva_()) return;
   if (sheet.getName() !== 'Derivaciones' || e.range.getColumn() !== 4 || e.range.getRow() < 2 || e.range.getNumRows() !== 1 || e.range.getNumColumns() !== 1) return;
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);

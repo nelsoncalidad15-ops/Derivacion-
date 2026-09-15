@@ -41,6 +41,7 @@ test('Todas las rutas terminan sin ciclos y los empates permiten elección final
 function backend() {
   const records: any[][] = [['Cliente', 'Tipo', 'Asesor', 'Ocupado', 'Fecha', 'ID', 'Estado', 'Asesor ID']];
   const props = new Map([['RONDA_ACTIVA', 'false']]);
+  const validations: any[] = [];
   const tables: Record<string, any[][]> = {
     Derivaciones: records,
     Equipo: [['ID', 'Nombre', 'Tipo', 'Activo', 'Ocupado', 'Última asignación']],
@@ -48,11 +49,17 @@ function backend() {
   };
   const book = { getId: () => '1aCByYYdl-2qpx4-ZFtLZty5GSGffnSS3URsAvO7gpc4', getSheetByName: (name: string): any => ({
     getName: () => name, getParent: () => book,
+    getMaxRows: () => Math.max(1000, tables[name].length),
+    insertRowsAfter() {},
+    deleteRows: (row: number, count: number) => { tables[name].splice(row - 1, count); },
     getLastRow: () => tables[name].length, getLastColumn: () => tables[name][0].length,
     getRange: (row: number, col: number, count = 1, columns = 1) => ({
       getValues: () => tables[name].slice(row - 1, row - 1 + count).map(r => r.slice(col - 1, col - 1 + columns)),
-      setValues: (values: any[][]) => values.forEach((valuesRow, i) => valuesRow.forEach((value, j) => { tables[name][row - 1 + i][col - 1 + j] = value; })),
+      getFormulas: () => tables[name].slice(row - 1, row - 1 + count).map(r => r.slice(col - 1, col - 1 + columns).map(() => '')),
+      setValues: (values: any[][]) => values.forEach((valuesRow, i) => valuesRow.forEach((value, j) => { tables[name][row - 1 + i] ??= []; tables[name][row - 1 + i][col - 1 + j] = value; })),
       setValue: (value: any) => { tables[name][row - 1][col - 1] = value; },
+      clearDataValidations() {},
+      setDataValidation: () => { validations.push({ name, row, col, count, columns }); },
       insertCheckboxes() {}, setNumberFormat() {},
     }),
     appendRow: (row: any[]) => tables[name].push([...row]),
@@ -61,12 +68,45 @@ function backend() {
   const context = vm.createContext({
     PropertiesService: { getScriptProperties: () => ({ getProperty: (key: string) => props.get(key), setProperty: (key: string, value: string) => props.set(key, value) }) },
     LockService: { getScriptLock: () => ({ tryLock: () => { assert.equal(locked, false); locked = true; return true; }, waitLock: () => { assert.equal(locked, false); locked = true; }, releaseLock: () => { locked = false; } }) },
-    SpreadsheetApp: { openById: () => book, flush() {} },
+    SpreadsheetApp: { openById: () => book, flush() {}, newDataValidation: () => ({
+      requireCheckbox() { return this; }, requireValueInList() { return this; }, setAllowInvalid() { return this; }, build() { return {}; },
+    }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (text: string) => ({ setMimeType: () => JSON.parse(text) }) },
   });
   vm.runInContext(readFileSync(new URL('../apps-script/Code.gs', import.meta.url), 'utf8'), context);
-  return { context, records, tables, props, book, send: (payload: any) => context.doPost({ postData: { contents: JSON.stringify(payload) } }) };
+  return { context, records, tables, props, book, validations, send: (payload: any) => context.doPost({ postData: { contents: JSON.stringify(payload) } }) };
 }
+
+test('Las casillas vacías hasta la fila 1000 no desplazan nuevas derivaciones', () => {
+  const { records, send } = backend();
+  for (let i = 0; i < 999; i++) records.push(['', '', '', false, '', '', '', '']);
+  const payload = { id: '11111111-1111-4111-8111-111111111111', tipo: 'Tradicional', fecha: new Date().toISOString() };
+  assert.equal(send(payload).cliente, 'Cliente 1');
+  assert.equal(records[1][5], payload.id);
+  assert.equal(send({ ...payload, id: '22222222-2222-4222-8222-222222222222' }).cliente, 'Cliente 2');
+  assert.equal(records[2][0], 'Cliente 2');
+  assert.equal(records.length, 1000);
+});
+
+test('Ordenar conserva registros y equipo, quita huecos y limita casillas a filas con datos', () => {
+  const { context, records, tables, validations, send, props } = backend();
+  for (let i = 0; i < 999; i++) records.push(['', '', '', false, '', '', '', '']);
+  const client = ['Cliente 66', 'Tradicional', 'Ana', false, new Date(), '11111111-1111-4111-8111-111111111111', 'Asignado', 'a'];
+  records.push([...client]);
+  tables.Equipo.push(['', '', '', false, false, ''], ['a', 'Ana', 'Tradicional', true, false, ''], ['', '', '', false, false, '']);
+  props.set('CLIENTE_SECUENCIA', '66');
+  context.ordenarFilasRegistro();
+  assert.equal(records.length, 2);
+  assert.deepEqual(records[1], client);
+  assert.deepEqual(tables.Equipo[1], ['a', 'Ana', 'Tradicional', true, false, '']);
+  assert.equal(tables.Equipo.length, 2);
+  assert.ok(validations.every(v => v.row === 2 && v.count === 1));
+  context.ordenarFilasRegistro();
+  assert.equal(records.length, 2);
+  const result = send({ id: '22222222-2222-4222-8222-222222222222', tipo: 'Planes', fecha: new Date().toISOString() });
+  assert.equal(result.cliente, 'Cliente 67');
+  assert.equal(records[2][0], 'Cliente 67');
+});
 test('Apps Script acepta registros sin clave, valida tipo y no duplica un reintento', () => {
   const { send, records } = backend();
   const payload = { id: '11111111-1111-4111-8111-111111111111', tipo: 'Tradicional', fecha: new Date().toISOString() };
