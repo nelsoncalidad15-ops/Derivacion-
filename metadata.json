@@ -1,0 +1,6 @@
+{
+  "name": "Autosol Volkswagen – Derivador Comercial",
+  "description": "Sistema de recepción y derivación comercial para concesionarios Volkswagen (Autosol) que determina el canal comercial ideal (Venta Directa o Planes de Ahorro) para clientes 0 km.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
