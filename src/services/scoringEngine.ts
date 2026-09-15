@@ -32,7 +32,7 @@ export function evaluarDerivacion(
     r.texto.toLowerCase().includes('mas de 100.000')
   );
 
-  if (resp3b && (resp3b.opcion_id === 'o_step3b_mas100' || resp3b.texto.includes('100.000'))) {
+  if (resp3b && (resp3b.opcion_id === 'o_step3b_mas100' || resp3b.texto.toLowerCase().includes('más de 100.000') || resp3b.texto.toLowerCase().includes('mas de 100.000'))) {
     return {
       canal: 'PLANES DE AHORRO',
       puntosDirecta: 0,
@@ -132,12 +132,12 @@ export function evaluarDerivacion(
     }
     if (
       opcion.opcion_id === 'o_step4a_cuota' ||
-      opcion.texto.toLowerCase().includes('comenzar con una cuota')
+      opcion.texto.toLowerCase().includes('comenzar con una cuota') || opcion.texto.toLowerCase().includes('pagar en cuotas y esperar')
     ) {
       totalPlanes += 2;
       contribuciones.push({
         preguntaTexto: 'Prioridad principal',
-        opcionTexto: 'Poder comenzar con una cuota y puedo esperar',
+        opcionTexto: 'Pagar en cuotas y esperar para retirar el vehículo',
         puntos: 2,
       });
       return;

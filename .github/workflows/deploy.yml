@@ -1,4 +1,4 @@
-﻿name: Publicar en GitHub Pages
+name: Publicar en GitHub Pages
 on:
   push:
     branches: [main]
@@ -23,6 +23,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm test
       - run: npm run lint
       - run: npm run build
       - uses: actions/configure-pages@v5

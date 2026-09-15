@@ -36,9 +36,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   );
 
   return (
-    <div className="w-full max-w-3xl mx-auto my-auto py-2 px-3 sm:px-6">
+    <div className="question-wrap w-full max-w-3xl mx-auto my-auto py-2">
       {/* Tablet Card */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl p-5 sm:p-9 relative">
+      <div className="question-card bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 relative">
         
         {/* Top Control Bar: Volver (Left) | Paso X de Y (Center) | Reiniciar (Right) */}
         <div className="flex items-center justify-between gap-2 mb-4">
@@ -55,7 +55,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           )}
 
           <div className="px-3.5 py-1.5 rounded-full bg-blue-50 text-[#001e50] border border-blue-100 text-xs sm:text-sm font-extrabold uppercase tracking-wider">
-            Paso {preguntaActualIndex + 1} de {totalPreguntas}
+            Orientación
           </div>
 
           <button
@@ -69,7 +69,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </div>
 
         {/* Minimalist Progress Track */}
-        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-6">
+        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-4">
           <div
             className="bg-[#001e50] h-full transition-all duration-300 ease-out rounded-full"
             style={{ width: `${progressPercent}%` }}
@@ -77,12 +77,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </div>
 
         {/* Question Heading */}
-        <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 leading-snug">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mb-2 leading-snug">
           {preguntaTextoFormateada}
         </h2>
 
         {pregunta.ayuda && (
-          <p className="text-slate-500 text-xs sm:text-sm md:text-base mb-6 font-normal">
+          <p className="text-slate-500 text-xs sm:text-sm md:text-base mb-4 font-normal">
             {pregunta.ayuda}
           </p>
         )}
@@ -96,7 +96,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               <button
                 key={op.opcion_id}
                 onClick={() => onSelectOption(op)}
-                className={`w-full flex items-center justify-between p-4 sm:p-5 rounded-2xl border-2 text-left transition-all cursor-pointer shadow-xs active:scale-[0.99] min-h-[70px] ${
+                className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 text-left transition-all cursor-pointer shadow-xs active:scale-[0.99] min-h-[70px] ${
                   isSelected
                     ? 'bg-[#001e50] text-white border-[#001e50] shadow-md'
                     : 'bg-slate-50 hover:bg-blue-50/50 border-slate-200 text-slate-900 hover:border-blue-400 font-semibold'

@@ -1,236 +1,114 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppData, CanalDerivacion, Opcion, ResultadoDerivacion } from './types';
 import { INITIAL_APP_DATA, INITIAL_PREGUNTAS, INITIAL_OPCIONES } from './data/initialData';
 import { loadAppData } from './services/sheetsService';
 import { evaluarDerivacion } from './services/scoringEngine';
 import { FlowStepId, getProgresoEstimado, obtenerSiguientePaso } from './services/flowEngine';
+import { CanalDefinitivo, flushRegistrations, queueRegistration, stopReceiptListener } from './services/registrationService';
 import { Navbar } from './components/Navbar';
 import { FastTrackCard } from './components/FastTrackCard';
 import { QuestionCard } from './components/QuestionCard';
 import { ResultCard } from './components/ResultCard';
-import { ConfigSheetModal } from './components/ConfigSheetModal';
+import { ChooseAreaCard } from './components/ChooseAreaCard';
+import { RegistrationSetup } from './components/RegistrationSetup';
 
 export default function App() {
   const [appData, setAppData] = useState<AppData>(INITIAL_APP_DATA);
-  const [isLoadingSync, setIsLoadingSync] = useState(false);
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
-
-  // Survey Flow State
-  const [modoFlow, setModoFlow] = useState<'FAST_TRACK' | 'CUESTIONARIO' | 'RESULTADO'>('FAST_TRACK');
+  const [modoFlow, setModoFlow] = useState<'FAST_TRACK' | 'CUESTIONARIO' | 'ELEGIR_AREA' | 'RESULTADO'>('FAST_TRACK');
   const [currentStepId, setCurrentStepId] = useState<FlowStepId>('step_0');
   const [history, setHistory] = useState<FlowStepId[]>([]);
   const [respuestas, setRespuestas] = useState<Record<string, Opcion>>({});
   const [resultado, setResultado] = useState<ResultadoDerivacion | null>(null);
+  const [asesor, setAsesor] = useState('');
+  const finalized = useRef(false);
+  const visitId = useRef(crypto.randomUUID());
+  const main = useRef<HTMLElement>(null);
 
-  // Load saved sheet ID from localStorage on mount
   useEffect(() => {
-    const savedSheetId = localStorage.getItem('DERIVADOR_SHEET_ID');
-    if (savedSheetId) {
-      handleSyncSheet(savedSheetId);
-    }
+    // Existing questionnaire configuration remains preconfigured, outside the client UI.
+    try {
+      const sheetId = localStorage.getItem('DERIVADOR_SHEET_ID');
+      if (sheetId) void loadAppData(sheetId).then(setAppData);
+    } catch { /* Base questions remain usable if local storage is unavailable. */ }
+    void flushRegistrations();
+    const interval = window.setInterval(() => void flushRegistrations(), 15000);
+    const retry = () => void flushRegistrations();
+    window.addEventListener('online', retry);
+    return () => { clearInterval(interval); window.removeEventListener('online', retry); };
   }, []);
 
-  // Sync Google Sheet Data
-  const handleSyncSheet = async (sheetId: string) => {
-    setIsLoadingSync(true);
-    try {
-      const data = await loadAppData(sheetId);
-      setAppData(data);
-      if (data.origenDatos === 'SHEETS' && sheetId) {
-        localStorage.setItem('DERIVADOR_SHEET_ID', sheetId);
-      }
-    } catch (err) {
-      console.error('Error syncing Google Sheet:', err);
-    } finally {
-      setIsLoadingSync(false);
-    }
-  };
+  useEffect(() => { main.current?.focus({ preventScroll: true }); window.scrollTo(0, 0); }, [modoFlow, currentStepId]);
 
-  const handleRestoreDemoData = () => {
-    localStorage.removeItem('DERIVADOR_SHEET_ID');
-    setAppData(INITIAL_APP_DATA);
-    handleResetSurvey();
-  };
-
-  // Reset entire flow for a new customer in 1 tap
   const handleResetSurvey = () => {
-    setRespuestas({});
-    setHistory([]);
-    setCurrentStepId('step_0');
-    setResultado(null);
-    setModoFlow('FAST_TRACK');
+    stopReceiptListener(visitId.current);
+    visitId.current = crypto.randomUUID();
+    finalized.current = false;
+    setRespuestas({}); setHistory([]); setCurrentStepId('step_0');
+    setResultado(null); setAsesor(''); setModoFlow('FAST_TRACK');
   };
 
-  // Fast-track initial question handler
-  const handleFastTrackOption = (opcion: Opcion, canalDirecto?: CanalDerivacion) => {
-    if (canalDirecto && (canalDirecto === 'VENTA DIRECTA' || canalDirecto === 'PLANES DE AHORRO')) {
-      const res = evaluarDerivacion({}, appData.preguntas, appData.configuracion, canalDirecto);
-      setResultado(res);
-      setModoFlow('RESULTADO');
-    } else {
-      // User tapped "No sé / quiero orientación" -> start question 1
-      setHistory(['step_0']);
-      setCurrentStepId('step_1');
-      setModoFlow('CUESTIONARIO');
+  const finish = (result: ResultadoDerivacion) => {
+    if (finalized.current) return;
+    setResultado(result);
+    if (result.canal !== 'VENTA DIRECTA' && result.canal !== 'PLANES DE AHORRO') {
+      setModoFlow('ELEGIR_AREA');
+      return;
     }
+    finalized.current = true;
+    const id = visitId.current;
+    queueRegistration(id, result.canal, receipt => { if (visitId.current === id) setAsesor(receipt.asesor); });
+    setModoFlow('RESULTADO');
   };
 
-  // Fast-track question & options
-  const preguntaFastTrack = useMemo(() => {
-    return (
-      appData.preguntas.find((p) => p.id === 'step_0' || p.tipo === 'ACCESO_RAPIDO') ||
-      INITIAL_PREGUNTAS[0]
-    );
-  }, [appData.preguntas]);
-
-  const opcionesFastTrack = useMemo(() => {
-    const ops = appData.opciones.filter(
-      (o) => o.pregunta_id === 'step_0' || o.pregunta_id === preguntaFastTrack.id
-    );
-    if (ops.length > 0) return ops;
-    return INITIAL_OPCIONES.filter((o) => o.pregunta_id === 'step_0');
-  }, [appData.opciones, preguntaFastTrack]);
-
-  // Current question in survey flow
-  const currentPregunta = useMemo(() => {
-    return (
-      appData.preguntas.find((p) => p.id === currentStepId) ||
-      INITIAL_PREGUNTAS.find((p) => p.id === currentStepId) ||
-      appData.preguntas[0]
-    );
-  }, [appData.preguntas, currentStepId]);
-
-  // Current options in survey flow
+  const startQuestionnaire = () => {
+    setHistory(['step_0']); setCurrentStepId('step_1'); setModoFlow('CUESTIONARIO');
+  };
+  const handleFastTrackOption = (_opcion: Opcion, canal?: CanalDerivacion) => {
+    if (canal === 'VENTA DIRECTA' || canal === 'PLANES DE AHORRO') finish(evaluarDerivacion({}, appData.preguntas, appData.configuracion, canal));
+    else startQuestionnaire();
+  };
+  const preguntaFastTrack = appData.preguntas.find(p => p.id === 'step_0' || p.tipo === 'ACCESO_RAPIDO') || INITIAL_PREGUNTAS[0];
+  const opcionesFastTrack = appData.opciones.filter(o => o.pregunta_id === preguntaFastTrack.id);
+  const currentPregunta = appData.preguntas.find(p => p.id === currentStepId) || INITIAL_PREGUNTAS.find(p => p.id === currentStepId)!;
   const currentOpciones = useMemo(() => {
-    const ops = appData.opciones.filter((o) => o.pregunta_id === currentStepId);
-    if (ops.length > 0) return ops;
-    return INITIAL_OPCIONES.filter((o) => o.pregunta_id === currentStepId);
+    const options = appData.opciones.filter(o => o.pregunta_id === currentStepId);
+    return (options.length ? options : INITIAL_OPCIONES.filter(o => o.pregunta_id === currentStepId)).map(o =>
+      o.opcion_id === 'o_step4a_cuota' ? { ...o, texto: 'Pagar en cuotas y esperar para retirar el vehículo', ayuda: 'Mi prioridad es una cuota acorde a mi presupuesto.' } : o);
   }, [appData.opciones, currentStepId]);
+  const progreso = getProgresoEstimado(currentStepId);
 
-  // Progress estimation for progress bar and step badge
-  const progreso = useMemo(() => {
-    return getProgresoEstimado(currentStepId);
-  }, [currentStepId]);
-
-  // Option selection during questionnaire
   const handleSelectOptionInSurvey = (opcion: Opcion) => {
-    const newRespuestas = {
-      ...respuestas,
-      [currentStepId]: opcion,
-    };
+    const newRespuestas = { ...respuestas, [currentStepId]: opcion };
     setRespuestas(newRespuestas);
-
     const decision = obtenerSiguientePaso(currentStepId, opcion, newRespuestas);
-
-    if (decision.isImmediateFinish) {
-      const res = evaluarDerivacion(
-        newRespuestas,
-        appData.preguntas,
-        appData.configuracion,
-        decision.canalFinalDirecto
-      );
-      setResultado(res);
-      setModoFlow('RESULTADO');
-    } else if (decision.nextStepId) {
-      setHistory((prev) => [...prev, currentStepId]);
-      setCurrentStepId(decision.nextStepId);
-    } else {
-      // Flow reached natural end
-      const res = evaluarDerivacion(newRespuestas, appData.preguntas, appData.configuracion);
-      setResultado(res);
-      setModoFlow('RESULTADO');
-    }
+    if (decision.nextStepId && !decision.isImmediateFinish) {
+      setHistory(prev => [...prev, currentStepId]); setCurrentStepId(decision.nextStepId);
+    } else finish(evaluarDerivacion(newRespuestas, appData.preguntas, appData.configuracion, decision.canalFinalDirecto));
   };
-
-  // Back button handler
   const handleBackInSurvey = () => {
-    if (history.length > 0) {
-      const previousStep = history[history.length - 1];
-      setHistory((prev) => prev.slice(0, -1));
-      if (previousStep === 'step_0') {
-        setModoFlow('FAST_TRACK');
-        setCurrentStepId('step_0');
-      } else {
-        setCurrentStepId(previousStep);
-      }
-    } else {
-      setModoFlow('FAST_TRACK');
-      setCurrentStepId('step_0');
-    }
+    const previousStep = history[history.length - 1] || 'step_0';
+    const remainingHistory = history.slice(0, -1);
+    setHistory(remainingHistory);
+    // Drop discarded branches so an old used-car answer cannot affect a new route.
+    setRespuestas(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => [...remainingHistory, previousStep].includes(id as FlowStepId))));
+    setCurrentStepId(previousStep);
+    setModoFlow(previousStep === 'step_0' ? 'FAST_TRACK' : 'CUESTIONARIO');
+  };
+  const chooseArea = (canal: CanalDefinitivo) => {
+    if (resultado) finish({ ...resultado, canal });
   };
 
+  if (window.location.hash === '#configurar') return <RegistrationSetup />;
   return (
     <div className={`app-shell flex flex-col text-slate-900 antialiased ${modoFlow === 'FAST_TRACK' ? 'app-home' : ''}`}>
-      {/* Top Reception Header (VW Style) */}
-      <Navbar
-        appData={appData}
-        onOpenConfig={() => setIsConfigModalOpen(true)}
-        onReset={handleResetSurvey}
-      />
-
-      {/* Main Tablet Canvas */}
-      <main className={modoFlow === 'FAST_TRACK' ? 'home-main' : 'flex-1 flex flex-col items-center justify-center p-3 sm:p-6 w-full max-w-4xl mx-auto'}>
-        
-        {/* Screen 1: Fast Track Initial Selection */}
-        {modoFlow === 'FAST_TRACK' && (
-          <FastTrackCard
-            pregunta={preguntaFastTrack}
-            opciones={opcionesFastTrack}
-            concesionarioNombre={appData?.configuracion?.NOMBRE_CONCESIONARIO || 'Autosol'}
-            onSelectOption={handleFastTrackOption}
-            onStartQuestionnaire={() => {
-              setHistory(['step_0']);
-              setCurrentStepId('step_1');
-              setModoFlow('CUESTIONARIO');
-            }}
-          />
-        )}
-
-        {/* Screen 2: Adaptive Step-by-Step Questionnaire */}
-        {modoFlow === 'CUESTIONARIO' && currentPregunta && (
-          <QuestionCard
-            pregunta={currentPregunta}
-            opciones={currentOpciones}
-            preguntaActualIndex={progreso.paso - 1}
-            totalPreguntas={progreso.total}
-            opcionSeleccionada={respuestas[currentStepId]}
-            config={appData.configuracion}
-            onSelectOption={handleSelectOptionInSurvey}
-            onBack={handleBackInSurvey}
-            onReset={handleResetSurvey}
-            canGoBack={true}
-          />
-        )}
-
-        {/* Screen 3: Tablet Result Derivation */}
-        {modoFlow === 'RESULTADO' && resultado && (
-          <ResultCard
-            resultado={resultado}
-            onNuevoIngreso={handleResetSurvey}
-          />
-        )}
-
+      <Navbar onReset={handleResetSurvey} />
+      <main ref={main} tabIndex={-1} className={`${modoFlow === 'FAST_TRACK' ? 'home-main' : 'flow-main'} outline-none`}>
+        {modoFlow === 'FAST_TRACK' && <FastTrackCard pregunta={preguntaFastTrack} opciones={opcionesFastTrack} onSelectOption={handleFastTrackOption} onStartQuestionnaire={startQuestionnaire} />}
+        {modoFlow === 'CUESTIONARIO' && currentPregunta && <QuestionCard pregunta={currentPregunta} opciones={currentOpciones} preguntaActualIndex={progreso.paso - 1} totalPreguntas={progreso.total} opcionSeleccionada={respuestas[currentStepId]} config={appData.configuracion} onSelectOption={handleSelectOptionInSurvey} onBack={handleBackInSurvey} onReset={handleResetSurvey} canGoBack />}
+        {modoFlow === 'ELEGIR_AREA' && <ChooseAreaCard onSelect={chooseArea} onBack={() => setModoFlow('CUESTIONARIO')} />}
+        {modoFlow === 'RESULTADO' && resultado && <ResultCard resultado={resultado} asesor={asesor} onNuevoIngreso={handleResetSurvey} />}
       </main>
-
-      {/* Footer info (VW Minimal) */}
       <footer className="site-footer"><span>Autosol · Concesionario Oficial Volkswagen</span><span>Jujuy · Recepción comercial</span></footer>
-
-      {/* Google Sheet Config Modal */}
-      <ConfigSheetModal
-        isOpen={isConfigModalOpen}
-        appData={appData}
-        config={appData?.configuracion}
-        isLoadingSync={isLoadingSync}
-        isLoading={isLoadingSync}
-        origenDatos={appData?.origenDatos}
-        errorSync={appData?.errorSync}
-        onClose={() => setIsConfigModalOpen(false)}
-        onSaveSheetId={async (sheetId) => {
-          await handleSyncSheet(sheetId);
-          setIsConfigModalOpen(false);
-        }}
-        onRestoreDemoData={handleRestoreDemoData}
-      />
     </div>
   );
 }

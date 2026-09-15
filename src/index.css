@@ -53,3 +53,34 @@
   .site-footer { flex-direction:column; gap:6px; }
 }
 @media(prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none !important; animation:none !important; } }
+
+/* Compact kiosk layout: retain touch targets while reducing chrome. */
+.site-header { padding:4px clamp(16px, 3vw, 40px); min-height:52px; gap:12px; }
+.brand-home { min-height:44px; display:flex; align-items:center; }
+.brand-home img { width:140px; }
+.reset-button { min-height:44px; padding:8px 14px; font-size:11px; border:0; }
+.site-footer { padding:10px clamp(16px, 3vw, 40px); }
+.home-main { padding:32px clamp(24px, 5vw, 72px); }
+.flow-main { display:flex; flex:1; flex-direction:column; align-items:center; justify-content:center; width:100%; max-width:900px; margin:auto; padding:20px; }
+.result-card { width:100%; max-width:620px; padding:clamp(24px, 4vw, 44px); border-radius:24px; background:#001e50; color:white; text-align:center; }
+@media(min-width:851px) and (max-height:800px) {
+  .welcome { gap:40px; }
+  .welcome h1 { font-size:44px; }
+  .route-card { padding:21px 18px; }
+  .flow-main { padding:12px 20px; }
+  .question-card { padding:22px; }
+}
+@media(max-width:850px) {
+  .welcome { gap:26px; }
+  .welcome h1 { margin:18px 0 16px; font-size:40px; }
+  .home-main { padding:26px; }
+  .route-card { padding:20px; }
+}
+@media(max-width:480px) {
+  .site-header { padding:4px 14px; }
+  .brand-home img { width:125px; }
+  .welcome h1 { font-size:32px; }
+  .flow-main { padding:12px; }
+  .home-main { padding:26px 20px; }
+  .site-footer { font-size:9px; }
+}

@@ -21,8 +21,8 @@ export const INITIAL_PREGUNTAS: Pregunta[] = [
   {
     id: 'step_1',
     orden: 1,
-    pregunta: '¿Tiene actualmente un vehículo?',
-    ayuda: 'Permite evaluar si interviene un vehículo en la operación.',
+    pregunta: '¿Tenés actualmente un vehículo?',
+    ayuda: 'Contanos un poco sobre vos.',
     tipo: 'STANDARD',
     condicion: '',
     activa: true,
@@ -30,8 +30,8 @@ export const INITIAL_PREGUNTAS: Pregunta[] = [
   {
     id: 'step_2b',
     orden: 2,
-    pregunta: '¿Tiene pensado entregar su vehículo?',
-    ayuda: 'Para evaluar la toma de su usado como parte de pago.',
+    pregunta: '¿Pensás entregar tu vehículo como parte de pago?',
+    ayuda: 'Podés usarlo como parte de pago.',
     tipo: 'STANDARD',
     condicion: 'TIENE_VEHICULO',
     activa: true,
@@ -40,7 +40,7 @@ export const INITIAL_PREGUNTAS: Pregunta[] = [
     id: 'step_3b',
     orden: 3,
     pregunta: '¿Cuántos kilómetros tiene aproximadamente?',
-    ayuda: 'Venta Directa toma unidades de hasta 100.000 km.',
+    ayuda: 'Una estimación es suficiente.',
     tipo: 'STANDARD',
     condicion: 'ENTREGAR_USADO',
     activa: true,
@@ -48,8 +48,8 @@ export const INITIAL_PREGUNTAS: Pregunta[] = [
   {
     id: 'step_2a',
     orden: 4,
-    pregunta: '¿Cuándo le gustaría tener su próximo vehículo?',
-    ayuda: 'El plazo define la disponibilidad inmediata o la programación en cuotas.',
+    pregunta: '¿Cuándo te gustaría tener tu próximo vehículo?',
+    ayuda: 'Elegí el plazo que tenés en mente.',
     tipo: 'STANDARD',
     condicion: '',
     activa: true,
@@ -57,8 +57,8 @@ export const INITIAL_PREGUNTAS: Pregunta[] = [
   {
     id: 'step_3a',
     orden: 5,
-    pregunta: '¿Cómo imagina realizar la operación?',
-    ayuda: 'Disponibilidad de fondos y modalidad de pago contemplada.',
+    pregunta: '¿Cómo pensás pagar tu próximo vehículo?',
+    ayuda: 'Elegí la forma de pago que estás considerando.',
     tipo: 'STANDARD',
     condicion: '',
     activa: true,
@@ -66,8 +66,8 @@ export const INITIAL_PREGUNTAS: Pregunta[] = [
   {
     id: 'step_4a',
     orden: 6,
-    pregunta: '¿Qué es más importante para usted?',
-    ayuda: 'Prioridad principal respecto a tiempos y modalidad de cuota.',
+    pregunta: '¿Qué es más importante para vos?',
+    ayuda: 'Elegí lo que más valorás para tu próxima compra.',
     tipo: 'STANDARD',
     condicion: '',
     activa: true,
@@ -75,8 +75,8 @@ export const INITIAL_PREGUNTAS: Pregunta[] = [
   {
     id: 'step_desempate_1',
     orden: 7,
-    pregunta: '¿Cómo adquirió su vehículo actual?',
-    ayuda: 'Desempate por experiencia previa.',
+    pregunta: '¿Cómo compraste tu vehículo actual?',
+    ayuda: 'Queremos conocer tu experiencia.',
     tipo: 'STANDARD',
     condicion: 'DESEMPATE',
     activa: true,
@@ -84,8 +84,8 @@ export const INITIAL_PREGUNTAS: Pregunta[] = [
   {
     id: 'step_desempate_2',
     orden: 8,
-    pregunta: '¿Le gustaría repetir la misma modalidad?',
-    ayuda: 'Preferencia de continuidad o cambio de modalidad.',
+    pregunta: '¿Te gustaría repetir la misma modalidad?',
+    ayuda: 'Contanos qué preferís para esta compra.',
     tipo: 'STANDARD',
     condicion: 'DESEMPATE_REPETIR',
     activa: true,
@@ -122,7 +122,7 @@ export const INITIAL_OPCIONES: Opcion[] = [
     canal_directo: 'ORIENTAR',
   },
 
-  // STEP 1: ¿Tiene actualmente un vehículo?
+  // STEP 1: ¿Tenés actualmente un vehículo?
   {
     pregunta_id: 'step_1',
     opcion_id: 'o_step1_si',
@@ -140,7 +140,7 @@ export const INITIAL_OPCIONES: Opcion[] = [
     puntos_planes: 0,
   },
 
-  // STEP 2B: ¿Tiene pensado entregar su vehículo?
+  // STEP 2B: ¿Pensás entregar tu vehículo como parte de pago?
   {
     pregunta_id: 'step_2b',
     opcion_id: 'o_step2b_si',
@@ -171,7 +171,7 @@ export const INITIAL_OPCIONES: Opcion[] = [
     pregunta_id: 'step_3b',
     opcion_id: 'o_step3b_hasta100',
     texto: 'Hasta 100.000 km',
-    ayuda: 'Venta Directa recibe la unidad como parte de pago.',
+    ayuda: 'El asesor evaluará tu vehículo.',
     puntos_directa: 1,
     puntos_planes: 0,
   },
@@ -179,7 +179,7 @@ export const INITIAL_OPCIONES: Opcion[] = [
     pregunta_id: 'step_3b',
     opcion_id: 'o_step3b_mas100',
     texto: 'Más de 100.000 km',
-    ayuda: 'Regla clave: superar los 100.000 km deriva a Planes de Ahorro.',
+    ayuda: 'El asesor te ayudará a evaluar las opciones para tu usado.',
     puntos_directa: 0,
     puntos_planes: 99, // Regla fuerte
   },
@@ -192,7 +192,7 @@ export const INITIAL_OPCIONES: Opcion[] = [
     puntos_planes: 0,
   },
 
-  // STEP 2A: ¿Cuándo le gustaría tener su próximo vehículo?
+  // STEP 2A: ¿Cuándo te gustaría tener tu próximo vehículo?
   {
     pregunta_id: 'step_2a',
     opcion_id: 'o_step2a_inmediato',
@@ -218,7 +218,7 @@ export const INITIAL_OPCIONES: Opcion[] = [
     puntos_planes: 0,
   },
 
-  // STEP 3A: ¿Cómo imagina realizar la operación?
+  // STEP 3A: ¿Cómo pensás pagar tu próximo vehículo?
   {
     pregunta_id: 'step_3a',
     opcion_id: 'o_step3a_dinero',
@@ -252,7 +252,7 @@ export const INITIAL_OPCIONES: Opcion[] = [
     puntos_planes: 0,
   },
 
-  // STEP 4A: ¿Qué es más importante para usted?
+  // STEP 4A: ¿Qué es más importante para vos?
   {
     pregunta_id: 'step_4a',
     opcion_id: 'o_step4a_rapido',
@@ -264,8 +264,8 @@ export const INITIAL_OPCIONES: Opcion[] = [
   {
     pregunta_id: 'step_4a',
     opcion_id: 'o_step4a_cuota',
-    texto: 'Poder comenzar con una cuota y puedo esperar',
-    ayuda: 'Prioridad en cuotas accesibles.',
+    texto: 'Pagar en cuotas y esperar para retirar el vehículo',
+    ayuda: 'Mi prioridad es una cuota acorde a mi presupuesto.',
     puntos_directa: 0,
     puntos_planes: 2,
   },
@@ -273,12 +273,12 @@ export const INITIAL_OPCIONES: Opcion[] = [
     pregunta_id: 'step_4a',
     opcion_id: 'o_step4a_ambas',
     texto: 'Quiero conocer ambas alternativas',
-    ayuda: 'Interés en comparar ambos canales.',
+    ayuda: 'Quiero que un asesor me ayude a elegir.',
     puntos_directa: 0,
     puntos_planes: 0,
   },
 
-  // DESEMPATE 1: ¿Cómo adquirió su vehículo actual?
+  // DESEMPATE 1: ¿Cómo compraste tu vehículo actual?
   {
     pregunta_id: 'step_desempate_1',
     opcion_id: 'o_des1_tradicional',
@@ -304,7 +304,7 @@ export const INITIAL_OPCIONES: Opcion[] = [
     puntos_planes: 0,
   },
 
-  // DESEMPATE 2: ¿Le gustaría repetir la misma modalidad?
+  // DESEMPATE 2: ¿Te gustaría repetir la misma modalidad?
   {
     pregunta_id: 'step_desempate_2',
     opcion_id: 'o_des2_si',
