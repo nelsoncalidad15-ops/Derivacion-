@@ -117,6 +117,7 @@ test('Apps Script acepta registros sin clave, valida tipo y no duplica un reinte
   const first = send(payload);
   assert.equal(first.cliente, 'Cliente 1');
   assert.equal(first.asesor, '');
+  assert.equal(first.estado, 'Solo área');
   assert.equal(records[1][6], 'Solo área');
   assert.deepEqual(send(payload), first);
   assert.equal(records.length, 2);
