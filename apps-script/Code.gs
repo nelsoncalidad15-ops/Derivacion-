@@ -100,7 +100,7 @@ function desactivarRonda() { PropertiesService.getScriptProperties().setProperty
 function rondaActiva_() { return PropertiesService.getScriptProperties().getProperty('RONDA_ACTIVA') === 'true'; }
 function json_(value) { return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON); }
 function rows_(sheet) { return sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues() : []; }
-function receipt_(row) { return { ok: true, id: row[5], cliente: row[0], asesor: row[2] || '' }; }
+function receipt_(row) { return { ok: true, id: row[5], cliente: row[0], asesor: row[2] || '', estado: row[6] || 'Solo área' }; }
 
 // An unchecked checkbox is FALSE, not an actual registration or team member.
 function tieneDatos_(row, checkboxColumns) {

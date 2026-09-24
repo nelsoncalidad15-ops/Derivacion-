@@ -1,7 +1,7 @@
 export type CanalDefinitivo = 'VENTA DIRECTA' | 'PLANES DE AHORRO';
 export type TipoRegistro = 'Tradicional' | 'Planes';
 export interface Registration { id: string; tipo: TipoRegistro; fecha: string; }
-export interface Receipt { ok: true; id: string; cliente: string; asesor: string; }
+export interface Receipt { ok: true; id: string; cliente: string; asesor: string; estado?: 'Asignado' | 'Sin asesor disponible' | 'Solo área'; }
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzqNzvh_c1pLRmxPe2dEW1KluZ9hsGmBoP6u518t0NBmNiSzloFpPoy-8wlQkHCo3ha_A/exec';
 const PREFIX = 'AUTOSOL_PENDIENTE_';
 const memory = new Map<string, Registration>();
