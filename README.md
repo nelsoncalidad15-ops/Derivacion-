@@ -28,7 +28,9 @@ La identidad visual utiliza el logo y la fotografía de Autosol proporcionados p
 - Cierre con área de atención, agradecimiento y retorno automático a los 20 segundos.
 - Las respuestas empatadas piden una elección final: no se registra un tipo mixto.
 - Registro directo mediante Apps Script, sin clave por tablet, con UUID, confirmación de escritura y reintentos.
-- Ronda opcional por área, desactivada por defecto, con disponibilidad y recuentos por asesor.
+- Ronda inmediata en la tablet de recepción: orden por área, disponibilidad, rederivación y excepción de jefatura. Sheets recibe el registro en segundo plano.
+
+La ronda se conserva en el navegador (`localStorage`). Debe operarse desde la misma tablet o PC de recepción para mantener un único orden. El botón **Ver ronda** permite cargar el equipo y marcar quién está ocupado; el resultado informa el asesor al cliente sin esperar a Google Sheets.
 
 La web usa la URL de Apps Script predefinida, sin vinculación por tablet. Requiere actualizar la implementación de Apps Script y publicar la web para activar el envío sin clave. Ver [activación y funcionamiento](apps-script/README.md).
 

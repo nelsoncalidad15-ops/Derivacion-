@@ -11,6 +11,8 @@ import { QuestionCard } from './components/QuestionCard';
 import { ResultCard } from './components/ResultCard';
 import { ChooseAreaCard } from './components/ChooseAreaCard';
 import { RegistrationSetup } from './components/RegistrationSetup';
+import { RoundPanel } from './components/RoundPanel';
+import { assignNext } from './services/roundService';
 
 export default function App() {
   const [appData, setAppData] = useState<AppData>(INITIAL_APP_DATA);
@@ -21,12 +23,14 @@ export default function App() {
   const [resultado, setResultado] = useState<ResultadoDerivacion | null>(null);
   const [asesor, setAsesor] = useState('');
   const [isConfiguring, setIsConfiguring] = useState(() => window.location.hash === '#configurar');
+  const [showRound, setShowRound] = useState(() => window.location.hash === '#ronda');
+  const [sinAsesor, setSinAsesor] = useState(false);
   const finalized = useRef(false);
   const visitId = useRef(crypto.randomUUID());
   const main = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const handleHash = () => setIsConfiguring(window.location.hash === '#configurar');
+    const handleHash = () => { setIsConfiguring(window.location.hash === '#configurar'); setShowRound(window.location.hash === '#ronda'); };
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
@@ -51,7 +55,7 @@ export default function App() {
     visitId.current = crypto.randomUUID();
     finalized.current = false;
     setRespuestas({}); setHistory([]); setCurrentStepId('step_0');
-    setResultado(null); setAsesor(''); setModoFlow('FAST_TRACK');
+    setResultado(null); setAsesor(''); setSinAsesor(false); setModoFlow('FAST_TRACK');
   };
 
   const finish = (result: ResultadoDerivacion) => {
@@ -63,7 +67,9 @@ export default function App() {
     }
     finalized.current = true;
     const id = visitId.current;
-    queueRegistration(id, result.canal, receipt => { if (visitId.current === id) setAsesor(receipt.asesor); });
+    const local = assignNext(id, result.canal);
+    setAsesor(local?.advisorName || ''); setSinAsesor(!local);
+    queueRegistration(id, result.canal, local ? { id: local.advisorId, name: local.advisorName } : undefined);
     setModoFlow('RESULTADO');
   };
 
@@ -106,14 +112,15 @@ export default function App() {
   };
 
   if (isConfiguring) return <RegistrationSetup />;
+  if (showRound) return <RoundPanel onClose={() => { window.location.hash = ''; setShowRound(false); }} />;
   return (
     <div className={`app-shell flex flex-col text-slate-900 antialiased ${modoFlow === 'FAST_TRACK' ? 'app-home' : ''}`}>
-      <Navbar onReset={handleResetSurvey} />
+      <Navbar onReset={handleResetSurvey} onRound={() => { window.location.hash = 'ronda'; setShowRound(true); }} />
       <main ref={main} tabIndex={-1} className={`${modoFlow === 'FAST_TRACK' ? 'home-main' : 'flow-main'} outline-none`}>
         {modoFlow === 'FAST_TRACK' && <FastTrackCard pregunta={preguntaFastTrack} opciones={opcionesFastTrack} onSelectOption={handleFastTrackOption} onStartQuestionnaire={startQuestionnaire} />}
         {modoFlow === 'CUESTIONARIO' && currentPregunta && <QuestionCard pregunta={currentPregunta} opciones={currentOpciones} preguntaActualIndex={progreso.paso - 1} totalPreguntas={progreso.total} opcionSeleccionada={respuestas[currentStepId]} config={appData.configuracion} onSelectOption={handleSelectOptionInSurvey} onBack={handleBackInSurvey} onReset={handleResetSurvey} canGoBack />}
         {modoFlow === 'ELEGIR_AREA' && <ChooseAreaCard onSelect={chooseArea} onBack={() => setModoFlow('CUESTIONARIO')} />}
-        {modoFlow === 'RESULTADO' && resultado && <ResultCard resultado={resultado} asesor={asesor} onNuevoIngreso={handleResetSurvey} />}
+        {modoFlow === 'RESULTADO' && resultado && <ResultCard resultado={resultado} asesor={asesor} sinAsesor={sinAsesor} onNuevoIngreso={handleResetSurvey} />}
       </main>
       <footer className="site-footer"><span>Autosol · Concesionario Oficial Volkswagen</span><span>Jujuy · Recepción comercial</span></footer>
     </div>

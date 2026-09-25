@@ -171,6 +171,21 @@ function doPost(e) {
     const ledger = book.getSheetByName('Derivaciones');
     if (!ledger) return json_({ ok: false, error: 'not_configured' });
     const existing = rows_(ledger);
+    if (payload.accion === 'actualizar_asignacion') {
+      if (!/^[a-f0-9-]{36}$/i.test(payload.visitaId || '') || typeof payload.asesor !== 'string' ||
+          payload.asesor.length > 100 || !/^[a-f0-9-]{36}$/i.test(payload.asesorId || '')) return json_({ ok: false, error: 'invalid' });
+      const index = existing.findIndex(row => row[5] === payload.visitaId);
+      if (index < 0) return json_({ ok: false, error: 'not_found' });
+      const row = existing[index]; const oldName = row[2];
+      row[2] = payload.asesor; row[6] = payload.motivo === 'Pedido del jefe' ? 'Excepción de jefatura' : 'Redirigido'; row[7] = payload.asesorId;
+      ledger.getRange(index + 2, 1, 1, 8).setValues([row]);
+      const observation = typeof payload.observacion === 'string' ? payload.observacion.trim().slice(0, 180) : '';
+      const movementReason = (payload.motivo || 'Actualización local') + (observation ? ' — Observación: ' + observation : '');
+      const movements = book.getSheetByName('Movimientos');
+      if (movements) movements.appendRow([new Date(payload.fecha), row[0], row[1], oldName, payload.asesor, movementReason, payload.visitaId]);
+      SpreadsheetApp.flush();
+      return json_({ ok: true, id: payload.id, cliente: row[0], asesor: payload.asesor });
+    }
     const duplicate = existing.find(row => row[5] === payload.id);
     if (duplicate) return json_(receipt_(duplicate));
     const props = PropertiesService.getScriptProperties();
@@ -178,9 +193,14 @@ function doPost(e) {
     const number = max + 1;
     // Reserve the number before append; gaps are safer than reusing a client number.
     props.setProperty('CLIENTE_SECUENCIA', String(number));
-    const advisor = rondaActiva_() ? chooseAdvisor_(rows_(book.getSheetByName('Equipo')), existing, payload.tipo) : null;
+    // The kiosk owns the live round and responds instantly. Sheets is the ledger.
+    // Keep the server-side round as a fallback for older kiosk versions.
+    const localAdvisor = typeof payload.asesor === 'string' && payload.asesor.length <= 100 &&
+      typeof payload.asesorId === 'string' && /^[a-f0-9-]{36}$/i.test(payload.asesorId)
+      ? { name: payload.asesor, id: payload.asesorId, row: 0 } : null;
+    const advisor = localAdvisor || (rondaActiva_() ? chooseAdvisor_(rows_(book.getSheetByName('Equipo')), existing, payload.tipo) : null);
     const row = ['Cliente ' + number, payload.tipo, advisor ? advisor.name : '', false, new Date(payload.fecha), payload.id,
-      rondaActiva_() ? (advisor ? 'Asignado' : 'Sin asesor disponible') : 'Solo área', advisor ? advisor.id : ''];
+      advisor ? 'Asignado en recepción' : (rondaActiva_() ? 'Sin asesor disponible' : 'Solo área'), advisor ? advisor.id : ''];
     // Ignore trailing FALSE placeholders left by earlier checkbox setup.
     let last = existing.length - 1;
     while (last >= 0 && !tieneDatos_(existing[last], [3])) last--;
@@ -189,7 +209,7 @@ function doPost(e) {
     ledger.getRange(targetRow, 1, 1, row.length).setValues([row]);
     ledger.getRange(targetRow, 4).setDataValidation(SpreadsheetApp.newDataValidation().requireCheckbox().build());
     ledger.getRange(targetRow, 5).setNumberFormat('dd/MM/yyyy HH:mm:ss');
-    if (advisor) book.getSheetByName('Equipo').getRange(advisor.row, 6).setValue(new Date());
+    if (advisor && advisor.row) book.getSheetByName('Equipo').getRange(advisor.row, 6).setValue(new Date());
     SpreadsheetApp.flush();
     return json_(receipt_(row));
   } catch (_) { return json_({ ok: false, error: 'server_error' }); }

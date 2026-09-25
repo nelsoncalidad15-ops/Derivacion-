@@ -10,6 +10,8 @@ Sheet previsto: https://docs.google.com/spreadsheets/d/1aCByYYdl-2qpx4-ZFtLZty5G
 4. Publicar también la web actualizada. Usa directamente la URL de Apps Script incluida en `src/services/registrationService.ts`; no requiere clave ni configuración por tablet. Las conexiones antiguas guardadas en el navegador ya no se usan.
 5. Hacer una derivación de prueba y verificar la nueva fila en **Derivaciones**. En `#configurar` se puede consultar el estado y reintentar pendientes. Las pruebas cuentan como registros.
 
+La versión actual recibe también el asesor decidido instantáneamente por la página. Las rederivaciones por ocupado y las excepciones pedidas por jefatura actualizan la fila y agregan el cambio a **Movimientos**. Para habilitarlo es indispensable crear una nueva versión de la implementación de Apps Script después de copiar `Code.gs`.
+
 El Sheet puede permanecer privado. El endpoint de escritura es público y no exige clave: cualquiera que conozca la URL puede enviar registros válidos. No ofrece una lectura general de la planilla. Conserva validación de datos, UUID para evitar duplicados y bloqueo para asignar números.
 
 Si aparece un error que pide actualizar Apps Script, la URL todavía ejecuta la versión anterior que exigía clave. Guardar el código en el editor no actualiza por sí solo la implementación.
