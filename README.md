@@ -32,6 +32,8 @@ La identidad visual utiliza el logo y la fotografía de Autosol proporcionados p
 
 La ronda se conserva en el navegador (`localStorage`). Debe operarse desde la misma tablet o PC de recepción para mantener un único orden. El botón **Ver ronda** permite cargar el equipo y marcar quién está ocupado; el resultado informa el asesor al cliente sin esperar a Google Sheets.
 
+El equipo comercial de Tradicional y Planes está precargado en el código. Jefes y personal de Recepción no participan de la rotación automática. Desde **Ver ronda** se pueden agregar, eliminar o cambiar temporalmente la disponibilidad de los integrantes.
+
 La web usa la URL de Apps Script predefinida, sin vinculación por tablet. Requiere actualizar la implementación de Apps Script y publicar la web para activar el envío sin clave. Ver [activación y funcionamiento](apps-script/README.md).
 
 ```sh

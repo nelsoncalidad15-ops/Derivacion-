@@ -6,13 +6,47 @@ export interface Assignment { id: string; visitId: string; area: RoundArea; advi
 export interface RoundState { advisors: Advisor[]; queues: Record<RoundArea, string[]>; assignments: Assignment[]; }
 
 const KEY = 'AUTOSOL_RONDA_LOCAL_V1';
-const empty = (): RoundState => ({ advisors: [], queues: { Tradicional: [], Planes: [] }, assignments: [] });
+const DEFAULT_ADVISORS: Advisor[] = [
+  ['EMMANUEL BRUZZONE', 'Tradicional'], ['RODRIGO CAVION', 'Planes'],
+  ['EDGAR LAMONACA', 'Tradicional'], ['PABLO LOPEZ', 'Tradicional'],
+  ['DARIO RODRIGUEZ', 'Planes'], ['ENZO BRANCICH', 'Tradicional'],
+  ['FACUNDO BARRIOS', 'Planes'], ['DAVID GOMEZ', 'Planes'],
+  ['SCHLEGEL JUAN', 'Planes'], ['ROBLEDO PABLO', 'Planes'],
+  ['MENDIZABAL LIONEL', 'Planes'], ['ARIADNA PETRUCIOLI', 'Planes'],
+  ['HORACIO ZELAYA', 'Planes'], ['CESAR ESPIN', 'Tradicional'],
+  ['VANESA ZAMBRANO', 'Planes'], ['ROMINA GARECA', 'Tradicional'],
+  ['MATIAS FACTTORI', 'Tradicional'], ['RAMIRO BENICIO', 'Tradicional'],
+  ['EMILSE DIAZ', 'Planes'], ['GASTON BASTOS', 'Tradicional'],
+  ['EZEQUIEL YANEZ', 'Planes'], ['LUIS FERREYRA', 'Planes'],
+].map(([name, area], index) => ({
+  id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+  name: name as string,
+  area: area as RoundArea,
+  busy: false,
+}));
+const empty = (): RoundState => {
+  const advisors = DEFAULT_ADVISORS.map(advisor => ({ ...advisor }));
+  return {
+    advisors,
+    queues: {
+      Tradicional: advisors.filter(a => a.area === 'Tradicional').map(a => a.id),
+      Planes: advisors.filter(a => a.area === 'Planes').map(a => a.id),
+    },
+    assignments: [],
+  };
+};
 const areaFor = (channel: CanalDefinitivo): RoundArea => channel === 'VENTA DIRECTA' ? 'Tradicional' : 'Planes';
 
 export function loadRound(): RoundState {
   try {
     const parsed = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (parsed?.advisors && parsed?.queues && parsed?.assignments) return normalize(parsed);
+    if (parsed?.advisors && parsed?.queues && parsed?.assignments) {
+      // Migrate an untouched empty roster created by the previous release.
+      if (parsed.advisors.length === 0 && parsed.assignments.length === 0) {
+        const seeded = empty(); saveRound(seeded); return seeded;
+      }
+      return normalize(parsed);
+    }
   } catch { /* Start with a clean local round if storage was corrupted. */ }
   return empty();
 }
