@@ -147,6 +147,13 @@ export function overrideAssignment(assignmentId: string, advisorId: string, obse
   state.assignments.push(replacement); saveRound(state); return { state, assignment: replacement };
 }
 
+export function setAssignmentObservation(assignmentId: string, observation: string): { state: RoundState; assignment: Assignment | null } {
+  const state = loadRound(); const assignment = state.assignments.find(a => a.id === assignmentId);
+  if (!assignment) return { state, assignment: null };
+  assignment.observation = observation.trim() || undefined;
+  saveRound(state); return { state, assignment };
+}
+
 export function nextAdvisor(area: RoundArea, state = loadRound()): Advisor | null {
   return state.queues[state.activeBranch][area].map(id => state.advisors.find(a => a.id === id)).find(a => a && !a.busy) || null;
 }

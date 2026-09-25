@@ -12,7 +12,7 @@ import { ResultCard } from './components/ResultCard';
 import { ChooseAreaCard } from './components/ChooseAreaCard';
 import { RegistrationSetup } from './components/RegistrationSetup';
 import { RoundPanel } from './components/RoundPanel';
-import { Assignment, assignNext, overrideAssignment, reassignBusy } from './services/roundService';
+import { Assignment, assignNext, overrideAssignment, reassignBusy, setAssignmentObservation } from './services/roundService';
 
 export default function App() {
   const [appData, setAppData] = useState<AppData>(INITIAL_APP_DATA);
@@ -111,11 +111,18 @@ export default function App() {
   const chooseArea = (canal: CanalDefinitivo) => {
     if (resultado) finish({ ...resultado, canal });
   };
-  const handleBusyReassignment = (observation: string) => {
-    if (!assignment) return false;
-    const changed = reassignBusy(assignment.id, observation);
-    if (!changed.assignment) { setAsesor(''); setSinAsesor(true); return false; }
+  const handleBusyReassignment = () => {
+    if (!assignment) return null;
+    const changed = reassignBusy(assignment.id);
+    if (!changed.assignment) { setAsesor(''); setSinAsesor(true); setAssignment(null); return null; }
     setAssignment(changed.assignment); setAsesor(changed.assignment.advisorName); setSinAsesor(false);
+    return changed.assignment.advisorName;
+  };
+  const handleBusyObservation = (observation: string) => {
+    if (!assignment) return false;
+    const changed = setAssignmentObservation(assignment.id, observation);
+    if (!changed.assignment) return false;
+    setAssignment({ ...changed.assignment });
     queueAssignmentUpdate(changed.assignment.visitId, changed.assignment.area, { id: changed.assignment.advisorId, name: changed.assignment.advisorName }, 'Asesor ocupado', observation);
     return true;
   };
@@ -137,7 +144,7 @@ export default function App() {
         {modoFlow === 'FAST_TRACK' && <FastTrackCard pregunta={preguntaFastTrack} opciones={opcionesFastTrack} onSelectOption={handleFastTrackOption} onStartQuestionnaire={startQuestionnaire} />}
         {modoFlow === 'CUESTIONARIO' && currentPregunta && <QuestionCard pregunta={currentPregunta} opciones={currentOpciones} preguntaActualIndex={progreso.paso - 1} totalPreguntas={progreso.total} opcionSeleccionada={respuestas[currentStepId]} config={appData.configuracion} onSelectOption={handleSelectOptionInSurvey} onBack={handleBackInSurvey} onReset={handleResetSurvey} canGoBack />}
         {modoFlow === 'ELEGIR_AREA' && <ChooseAreaCard onSelect={chooseArea} onBack={() => setModoFlow('CUESTIONARIO')} />}
-        {modoFlow === 'RESULTADO' && resultado && <ResultCard resultado={resultado} asesor={asesor} sinAsesor={sinAsesor} assignment={assignment} onBusyReassign={handleBusyReassignment} onExceptionalReturn={handleExceptionalReturn} onNuevoIngreso={handleResetSurvey} />}
+        {modoFlow === 'RESULTADO' && resultado && <ResultCard resultado={resultado} asesor={asesor} sinAsesor={sinAsesor} assignment={assignment} onBusyReassign={handleBusyReassignment} onSaveBusyObservation={handleBusyObservation} onExceptionalReturn={handleExceptionalReturn} onNuevoIngreso={handleResetSurvey} />}
       </main>
       <footer className="site-footer"><span>Autosol · Concesionario Oficial Volkswagen</span><span>Jujuy · Recepción comercial</span></footer>
     </div>
