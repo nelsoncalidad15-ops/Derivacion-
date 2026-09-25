@@ -4,7 +4,7 @@ import { INITIAL_APP_DATA, INITIAL_PREGUNTAS, INITIAL_OPCIONES } from './data/in
 import { loadAppData } from './services/sheetsService';
 import { evaluarDerivacion } from './services/scoringEngine';
 import { FlowStepId, getProgresoEstimado, obtenerSiguientePaso } from './services/flowEngine';
-import { CanalDefinitivo, flushRegistrations, queueRegistration, stopReceiptListener } from './services/registrationService';
+import { CanalDefinitivo, flushRegistrations, queueAssignmentUpdate, queueRegistration, stopReceiptListener } from './services/registrationService';
 import { Navbar } from './components/Navbar';
 import { FastTrackCard } from './components/FastTrackCard';
 import { QuestionCard } from './components/QuestionCard';
@@ -12,7 +12,7 @@ import { ResultCard } from './components/ResultCard';
 import { ChooseAreaCard } from './components/ChooseAreaCard';
 import { RegistrationSetup } from './components/RegistrationSetup';
 import { RoundPanel } from './components/RoundPanel';
-import { assignNext } from './services/roundService';
+import { Assignment, assignNext, overrideAssignment, reassignBusy } from './services/roundService';
 
 export default function App() {
   const [appData, setAppData] = useState<AppData>(INITIAL_APP_DATA);
@@ -25,6 +25,7 @@ export default function App() {
   const [isConfiguring, setIsConfiguring] = useState(() => window.location.hash === '#configurar');
   const [showRound, setShowRound] = useState(() => window.location.hash === '#ronda');
   const [sinAsesor, setSinAsesor] = useState(false);
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
   const finalized = useRef(false);
   const visitId = useRef(crypto.randomUUID());
   const main = useRef<HTMLElement>(null);
@@ -55,7 +56,7 @@ export default function App() {
     visitId.current = crypto.randomUUID();
     finalized.current = false;
     setRespuestas({}); setHistory([]); setCurrentStepId('step_0');
-    setResultado(null); setAsesor(''); setSinAsesor(false); setModoFlow('FAST_TRACK');
+    setResultado(null); setAsesor(''); setSinAsesor(false); setAssignment(null); setModoFlow('FAST_TRACK');
   };
 
   const finish = (result: ResultadoDerivacion) => {
@@ -68,7 +69,7 @@ export default function App() {
     finalized.current = true;
     const id = visitId.current;
     const local = assignNext(id, result.canal);
-    setAsesor(local?.advisorName || ''); setSinAsesor(!local);
+    setAsesor(local?.advisorName || ''); setSinAsesor(!local); setAssignment(local);
     queueRegistration(id, result.canal, local ? { id: local.advisorId, name: local.advisorName } : undefined);
     setModoFlow('RESULTADO');
   };
@@ -110,6 +111,22 @@ export default function App() {
   const chooseArea = (canal: CanalDefinitivo) => {
     if (resultado) finish({ ...resultado, canal });
   };
+  const handleBusyReassignment = (observation: string) => {
+    if (!assignment) return false;
+    const changed = reassignBusy(assignment.id, observation);
+    if (!changed.assignment) { setAsesor(''); setSinAsesor(true); return false; }
+    setAssignment(changed.assignment); setAsesor(changed.assignment.advisorName); setSinAsesor(false);
+    queueAssignmentUpdate(changed.assignment.visitId, changed.assignment.area, { id: changed.assignment.advisorId, name: changed.assignment.advisorName }, 'Asesor ocupado', observation);
+    return true;
+  };
+  const handleExceptionalReturn = (advisorId: string, observation: string) => {
+    if (!assignment) return false;
+    const changed = overrideAssignment(assignment.id, advisorId, observation);
+    if (!changed.assignment) return false;
+    setAssignment(changed.assignment); setAsesor(changed.assignment.advisorName); setSinAsesor(false);
+    queueAssignmentUpdate(changed.assignment.visitId, changed.assignment.area, { id: changed.assignment.advisorId, name: changed.assignment.advisorName }, 'Pedido del jefe', observation);
+    return true;
+  };
 
   if (isConfiguring) return <RegistrationSetup />;
   if (showRound) return <RoundPanel onClose={() => { window.location.hash = ''; setShowRound(false); }} />;
@@ -120,7 +137,7 @@ export default function App() {
         {modoFlow === 'FAST_TRACK' && <FastTrackCard pregunta={preguntaFastTrack} opciones={opcionesFastTrack} onSelectOption={handleFastTrackOption} onStartQuestionnaire={startQuestionnaire} />}
         {modoFlow === 'CUESTIONARIO' && currentPregunta && <QuestionCard pregunta={currentPregunta} opciones={currentOpciones} preguntaActualIndex={progreso.paso - 1} totalPreguntas={progreso.total} opcionSeleccionada={respuestas[currentStepId]} config={appData.configuracion} onSelectOption={handleSelectOptionInSurvey} onBack={handleBackInSurvey} onReset={handleResetSurvey} canGoBack />}
         {modoFlow === 'ELEGIR_AREA' && <ChooseAreaCard onSelect={chooseArea} onBack={() => setModoFlow('CUESTIONARIO')} />}
-        {modoFlow === 'RESULTADO' && resultado && <ResultCard resultado={resultado} asesor={asesor} sinAsesor={sinAsesor} onNuevoIngreso={handleResetSurvey} />}
+        {modoFlow === 'RESULTADO' && resultado && <ResultCard resultado={resultado} asesor={asesor} sinAsesor={sinAsesor} assignment={assignment} onBusyReassign={handleBusyReassignment} onExceptionalReturn={handleExceptionalReturn} onNuevoIngreso={handleResetSurvey} />}
       </main>
       <footer className="site-footer"><span>Autosol · Concesionario Oficial Volkswagen</span><span>Jujuy · Recepción comercial</span></footer>
     </div>

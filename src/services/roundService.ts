@@ -110,10 +110,10 @@ export function reassignBusy(assignmentId: string, observation = ''): { state: R
 }
 
 /** A manager override intentionally leaves the normal queue untouched. */
-export function overrideAssignment(assignmentId: string, advisorId: string): { state: RoundState; assignment: Assignment | null } {
+export function overrideAssignment(assignmentId: string, advisorId: string, observation = ''): { state: RoundState; assignment: Assignment | null } {
   const state = loadRound(); const current = state.assignments.find(a => a.id === assignmentId); const advisor = state.advisors.find(a => a.id === advisorId);
   if (!current || !advisor || advisor.area !== current.area) return { state, assignment: null };
-  const replacement: Assignment = { ...current, id: crypto.randomUUID(), advisorId, advisorName: advisor.name, createdAt: new Date().toISOString(), status: 'Excepción' };
+  const replacement: Assignment = { ...current, id: crypto.randomUUID(), advisorId, advisorName: advisor.name, createdAt: new Date().toISOString(), status: 'Excepción', observation: observation.trim() || undefined };
   state.assignments.push(replacement); saveRound(state); return { state, assignment: replacement };
 }
 
