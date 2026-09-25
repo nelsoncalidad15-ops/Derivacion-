@@ -28,7 +28,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ resultado, asesor, sinAs
     const timeout = window.setTimeout(() => reset.current(), RETURN_SECONDS * 1000);
     return () => { clearInterval(interval); clearTimeout(timeout); };
   }, [action]);
-  const advisors = assignment ? loadRound().advisors.filter(a => a.area === assignment.area) : [];
+  const advisors = assignment ? loadRound().advisors.filter(a => a.area === assignment.area && a.branch === assignment.branch) : [];
   const closeAction = () => { setAction(null); setObservation(''); setAdvisorId(''); };
   const confirm = () => {
     const ok = action === 'BUSY' ? onBusyReassign(observation) : onExceptionalReturn(advisorId, observation);

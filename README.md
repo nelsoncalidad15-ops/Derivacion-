@@ -34,6 +34,8 @@ La ronda se conserva en el navegador (`localStorage`). Debe operarse desde la mi
 
 El equipo comercial de Tradicional y Planes está precargado en el código. Jefes y personal de Recepción no participan de la rotación automática. Desde **Ver ronda** se pueden agregar, eliminar o cambiar temporalmente la disponibilidad de los integrantes.
 
+El selector de sucursal mantiene rondas independientes para **Jujuy** y **Salta**. Jujuy incluye el equipo inicial; Salta comienza vacío. El orden se modifica arrastrando asesores o con las flechas disponibles para pantallas táctiles.
+
 La web usa la URL de Apps Script predefinida, sin vinculación por tablet. Requiere actualizar la implementación de Apps Script y publicar la web para activar el envío sin clave. Ver [activación y funcionamiento](apps-script/README.md).
 
 ```sh
