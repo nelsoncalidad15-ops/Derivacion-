@@ -1,6 +1,6 @@
 export type CanalDefinitivo = 'VENTA DIRECTA' | 'PLANES DE AHORRO';
 export type TipoRegistro = 'Tradicional' | 'Planes';
-export interface Registration { id: string; tipo: TipoRegistro; fecha: string; asesor?: string; asesorId?: string; accion?: 'actualizar_asignacion'; visitaId?: string; motivo?: string; observacion?: string; }
+export interface Registration { id: string; tipo: TipoRegistro; fecha: string; asesor?: string; asesorId?: string; sucursal?: 'Jujuy' | 'Salta'; accion?: 'actualizar_asignacion'; visitaId?: string; motivo?: string; observacion?: string; }
 export interface Receipt { ok: true; id: string; cliente: string; asesor: string; }
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzqNzvh_c1pLRmxPe2dEW1KluZ9hsGmBoP6u518t0NBmNiSzloFpPoy-8wlQkHCo3ha_A/exec';
 const PREFIX = 'AUTOSOL_PENDIENTE_';
@@ -25,8 +25,8 @@ export function getPending(): Registration[] {
 export function getRegistrationStatus() {
   return { pending: getPending().length, error: lastError, volatileStorage, configured: true };
 }
-export function queueRegistration(id: string, canal: CanalDefinitivo, advisor?: { id: string; name: string }, onReceipt?: (receipt: Receipt) => void) {
-  const item: Registration = { id, tipo: canal === 'VENTA DIRECTA' ? 'Tradicional' : 'Planes', fecha: new Date().toISOString(), asesor: advisor?.name, asesorId: advisor?.id };
+export function queueRegistration(id: string, canal: CanalDefinitivo, advisor?: { id: string; name: string; branch?: 'Jujuy' | 'Salta' }, onReceipt?: (receipt: Receipt) => void) {
+  const item: Registration = { id, tipo: canal === 'VENTA DIRECTA' ? 'Tradicional' : 'Planes', fecha: new Date().toISOString(), asesor: advisor?.name, asesorId: advisor?.id, sucursal: advisor?.branch };
   if (!getPending().some(entry => entry.id === id)) {
     memory.set(id, item);
     try { localStorage.setItem(PREFIX + id, JSON.stringify(item)); }
@@ -35,9 +35,9 @@ export function queueRegistration(id: string, canal: CanalDefinitivo, advisor?: 
   if (onReceipt) listeners.set(id, onReceipt);
   void flushRegistrations();
 }
-export function queueAssignmentUpdate(visitId: string, area: TipoRegistro, advisor: { id: string; name: string }, motivo: string, observacion?: string) {
+export function queueAssignmentUpdate(visitId: string, area: TipoRegistro, advisor: { id: string; name: string }, motivo: string, observacion?: string, sucursal?: 'Jujuy' | 'Salta') {
   const id = crypto.randomUUID();
-  const item: Registration = { id, visitaId: visitId, accion: 'actualizar_asignacion', tipo: area, fecha: new Date().toISOString(), asesor: advisor.name, asesorId: advisor.id, motivo, observacion: observacion?.trim() || undefined };
+  const item: Registration = { id, visitaId: visitId, accion: 'actualizar_asignacion', tipo: area, fecha: new Date().toISOString(), asesor: advisor.name, asesorId: advisor.id, motivo, observacion: observacion?.trim() || undefined, sucursal };
   memory.set(id, item);
   try { localStorage.setItem(PREFIX + id, JSON.stringify(item)); }
   catch { volatileStorage = true; lastError = 'Almacenamiento no disponible: mantené esta pestaña abierta hasta sincronizar.'; }

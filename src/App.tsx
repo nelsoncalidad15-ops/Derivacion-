@@ -70,7 +70,7 @@ export default function App() {
     const id = visitId.current;
     const local = assignNext(id, result.canal);
     setAsesor(local?.advisorName || ''); setSinAsesor(!local); setAssignment(local);
-    queueRegistration(id, result.canal, local ? { id: local.advisorId, name: local.advisorName } : undefined);
+    queueRegistration(id, result.canal, local ? { id: local.advisorId, name: local.advisorName, branch: local.branch } : undefined);
     setModoFlow('RESULTADO');
   };
 
@@ -123,7 +123,7 @@ export default function App() {
     const changed = setAssignmentObservation(assignment.id, observation);
     if (!changed.assignment) return false;
     setAssignment({ ...changed.assignment });
-    queueAssignmentUpdate(changed.assignment.visitId, changed.assignment.area, { id: changed.assignment.advisorId, name: changed.assignment.advisorName }, 'Asesor ocupado', observation);
+    queueAssignmentUpdate(changed.assignment.visitId, changed.assignment.area, { id: changed.assignment.advisorId, name: changed.assignment.advisorName }, 'Asesor ocupado', observation, changed.assignment.branch);
     return true;
   };
 
